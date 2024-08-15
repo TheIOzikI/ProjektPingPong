@@ -101,7 +101,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 
 	switch (msg)
 	{
-	case WM_CREATE:]
+	case WM_CREATE:
 	{
 		HWND control, child, parent;
 		HFONT hFont = CreateFontW(22, 0, 0, 0, 600, 0, 0, 0, 0, 1, 1, 2, VARIABLE_PITCH | FF_SWISS, L"Tahoma");
