@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /Scanner3D/Scanner3D.vcxproj
 /Scanner3D/Scanner3D.vcxproj.filters
+/Scanner3D/main_threads.h
