@@ -95,9 +95,6 @@ void liveFeed(void* param)
 				}
 			}
 
-			// kopiowanie do obrazka RGB
-			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
-
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
 				mask_low = cam->grayImg > 250;
