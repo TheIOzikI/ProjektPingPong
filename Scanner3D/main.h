@@ -38,7 +38,6 @@ typedef unsigned long long	uint64;
 #define D3DGRAY(v)			D3DCOLOR_ARGB(0xff,v,v,v)
 
 // files options
-#define CAM_CALIB_PARAM_FILE "config\\RT_calib_board.bin" // actual calibration parameters
 #define CAM_LEFT_PARAM_FILE  "config\\LEFT_cam_param.bin" // actual camera parameters
 #define CAM_RIGHT_PARAM_FILE "config\\RIGHT_cam_param.bin" // actual camera parameters
 #define REF_PATTERN_FILE	 "config\\calibration_board_ref.bin" // calibration board (points)
@@ -60,12 +59,11 @@ typedef unsigned long long	uint64;
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
 //#define DT					40.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
 #define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
-#define N_CALIB_POINTS		17
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			10000U		
-#define CAM_EXP_DEFAULT		3000U		
+#define CAM_EXP_DEFAULT		4000U		
 #define CAM_GAIN_DEFAULT	0.8
 
 // markers parameters
@@ -88,8 +86,8 @@ typedef unsigned long long	uint64;
 #define CAM_EXP_THRESHOLD	20U // threshold używany przy liczeniu mapy fazy (możemy inaczej nazwać)
 
 // 2nd screen parameters (projektor)
-#define PROJ_WIDTH			1024 //1920
-#define PROJ_HEIGHT			768 //1080
+#define PROJ_WIDTH			1920 //1920
+#define PROJ_HEIGHT			1080 //1080
 #define PROJ_WIDTH2			PROJ_WIDTH/2
 #define PROJ_HEIGHT2		PROJ_HEIGHT/2
 #define PROJ_POS_X			0
@@ -171,7 +169,7 @@ struct ApplicationWindows {
 struct LogicalVariables {
 	uint8 view_rotation = 2, imdisp = 0; // zmienna wybierająca sposob wyswietlania obrazów
 	bool stop_exe = false, save_img_1 = false, save_img_2 = false,
-		auto_exp = false, mkr_color = false; // 0 (false) = czarny srodek  1 (true) = bialy srodek
+		auto_exp = false, mkr_color = true; // 0 (false) = czarny srodek  1 (true) = bialy srodek
 };
 
 // strukura dla markerow plaskich na obrazie
@@ -218,7 +216,7 @@ typedef struct _Camera {
 	PYLON_WAITOBJECT_HANDLE	wait;
 	PYLON_STREAMBUFFER_HANDLE streamBuff[NUM_BUFFERS];
 	uint8 status, * grabBuff[NUM_BUFFERS], * buffer;
-	Mat Kc, Ac, grayImg;
+	Mat Kc, Ac, grayImg, bgrImg;
 	uint64 s_exp_time, savedExp;
 	Marker coded_markers[56] = { 0 };
 	Marker coded_markers_buff[56] = { 0 };

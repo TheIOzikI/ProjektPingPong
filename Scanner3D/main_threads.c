@@ -17,12 +17,12 @@ void liveFeed(void* param)
 	PylonGrabResult_t result;
 	uint64 ctx;
 	uint8 i = 0, localstrm, fot_num_1 = 0, fot_num_2 = 0;
-	Mat mask_low, mask_high, colorImg, binImg, calibImg;
+	Mat mask_low, mask_high, colorImg, binImg, calibImg, hsvImg;
 	vector<Point2f> distorted_points(56), undistorted_points(56);
 	bool isReady;
 	int fontFace = FONT_HERSHEY_DUPLEX;
 	float dTcam = 0.0, pix2 = 0.0, average_brightness = 0.0;
-	double fontScale = 5.0;
+	double fontScale = 3.0;
 
 	if (!cam->hdl) return;
 	if (cam->status) return;
@@ -79,21 +79,18 @@ void liveFeed(void* param)
 			// przepisanie z bufora do Mat'a
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
-			// detekcja markerow
+			// przepisanie z bufora do Mat'a
+			pylonImageToCvHsvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->bgrImg);
+
+			// detekcja markerow (dziala tylko gdy kalibracja)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
-			for (i = 0; i < 56; i++) {
-				if (cam->coded_markers[i].isSet) {
-					distorted_points[i].x = cam->coded_markers[i].x;
-					distorted_points[i].y = cam->coded_markers[i].y;
-				}
-			}
-			undistorted_points = undistortPointsMG(cam, distorted_points);
-			for (i = 0; i < 56; i++) {
-				if (cam->coded_markers[i].isSet) {
-					cam->coded_markers[i].x = undistorted_points[i].x;
-					cam->coded_markers[i].y = undistorted_points[i].y;
-				}
-			}
+
+			// kopiowanie do obrazka RGB
+			//cvtColor(cam->bgrImg, hsvImg, COLOR_BGR2HSV);
+
+			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
+			//imshow(cam->bgrImg);
+			//findBall(cam->hsvImg, colorImg);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -162,19 +159,19 @@ void liveFeed(void* param)
 
 			// wydruk informacji w oknach kamer
 			if (cam->cam_num == 1) {
-				putText(colorImg, "CAM 1 - LEFT", Point((int)(CAM_WIDTH) / 2 - 680, 180), fontFace, fontScale, Scalar(255, 255, 0), 10);
+				putText(colorImg, "CAM 1 - LEFT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 
-				putText(colorImg, "exp s:", Point(60, 150), fontFace, fontScale, Scalar(255, 255, 255), 10);
-				putText(colorImg, to_string(cam->s_exp_time), Point(620, 150), fontFace, fontScale, Scalar(255, 255, 255), 10);
+				putText(colorImg, "exp s:", Point(40, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(colorImg, to_string(cam->s_exp_time), Point(330, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
 
-				putText(colorImg, "fps:", Point(60, 330), fontFace, fontScale, Scalar(255, 255, 255), 10);
-				putText(colorImg, toStringWithPrecision(1 / dTcam, 1), Point(410, 330), fontFace, fontScale, Scalar(255, 255, 255), 10);
+				putText(colorImg, "fps:", Point(40, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(colorImg, toStringWithPrecision(1 / dTcam, 1), Point(330, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
 
-				putText(colorImg, "auto exp:", Point(60, 2900), fontFace, fontScale, Scalar(255, 255, 255), 10);
-				putText(colorImg, to_string(logicVariables.auto_exp), Point(850, 2900), fontFace, fontScale, Scalar(255, 255, 255), 10);
+				putText(colorImg, "auto exp:", Point(40, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(colorImg, to_string(logicVariables.auto_exp), Point(500, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
 			}
 			else {
-				putText(colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 680, 180), fontFace, fontScale, Scalar(255, 255, 0), 10);
+				putText(colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 			}
 			imshow(cam->window, colorImg); // wyswietlenie obrazu
 		}
@@ -480,6 +477,11 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	}
 }
 
+//void findBall(Mat& hsvImg, Mat& colorImg) {
+//
+//}
+
+
 void cleanBorder(Mat& img) {
 	Scalar el;
 	uint16_t i;
@@ -592,6 +594,11 @@ static string toStringWithPrecision(double value, int precision) {
 static void pylonImageToCvMat(const void* pBuffer, int width, int height, Mat& image)
 {
 	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat z danych obrazu Pylon
+}
+
+static void pylonImageToCvHsvMat(const void* pBuffer, int width, int height, Mat& image)
+{
+	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat Hsv z danych obrazu Pylon
 }
 
 vector<Point2f> undistortPointsMG(pCamera cam, vector<Point2f> good_points_distorted)

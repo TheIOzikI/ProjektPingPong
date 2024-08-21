@@ -168,10 +168,10 @@ bool initCameras(void)
 	////////////////// obrócenie obrazów //////////////////
 	/* Enable Reverse X, if available */
 	errRes = PylonDeviceSetBooleanFeature(hCam1, "ReverseX", 1);
-	errRes = PylonDeviceSetBooleanFeature(hCam2, "ReverseX", 1);
+	errRes = PylonDeviceSetBooleanFeature(hCam2, "ReverseX", 0);
 	/* Enable Reverse Y, if available */
 	errRes = PylonDeviceSetBooleanFeature(hCam1, "ReverseY", 1);
-	errRes = PylonDeviceSetBooleanFeature(hCam2, "ReverseY", 1);
+	errRes = PylonDeviceSetBooleanFeature(hCam2, "ReverseY", 0);
 
 	////////////////// sprawdzenie kamer po ID //////////////////
 	size = 16;
