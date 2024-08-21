@@ -147,6 +147,11 @@ bool initCameras(void)
 		odprintf("[Info] Set Width and Height\n");
 	}
 
+	///////////////////////////////kolorowy obraz /////////////////////////////////////
+	// Set the pixel format to color (e.g., BayerRG8 or RGB8Packed)
+	errRes = PylonDeviceFeatureFromString(hCam1, "PixelFormat", "BayerRG8");	pylonCheck(errRes);
+	errRes = PylonDeviceFeatureFromString(hCam2, "PixelFormat", "BayerRG8");	pylonCheck(errRes);
+
 	////////////////// ustawienie gaina //////////////////
 	/* Set the "raw" gain value to specified value */
 	errRes = PylonDeviceSetFloatFeature(hCam1, "Gain", CAM_GAIN_DEFAULT);
