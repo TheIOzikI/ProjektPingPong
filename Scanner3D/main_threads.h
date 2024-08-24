@@ -15,7 +15,7 @@ float alignRadians(Mat&, float, Point2f);
 uint8_t readCode(Mat&, RotatedRect);
 static string toStringWithPrecision(double, int);
 static void pylonImageToCvMat(const void*, int, int, Mat&);
-static void pylonImageToCvHsvMat(const void*, int, int, Mat&);
+static void pylonImageToCvBayerMat(const void*, int, int, Mat&);
 vector<Point2f> undistortPointsMG(pCamera, vector<Point2f>);
 
 // tablica podmiany kodów markerów na ich numery (zgodne z wydrukiem)

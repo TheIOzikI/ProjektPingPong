@@ -80,17 +80,18 @@ void liveFeed(void* param)
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
 			// przepisanie z bufora do Mat'a
-			pylonImageToCvHsvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->bgrImg);
+			pylonImageToCvBayerMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->bgrImg);
 
 			// detekcja markerow (dziala tylko gdy kalibracja)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
+			cvtColor(cam->bgrImg, hsvImg, COLOR_BayerBG2BGR);
+
 			// kopiowanie do obrazka RGB
-			//cvtColor(cam->bgrImg, hsvImg, COLOR_BGR2HSV);
+			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
-			//imshow(cam->bgrImg);
-			//findBall(cam->hsvImg, colorImg);
+			//findBall(cam->bgrImg, colorImg);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -100,17 +101,23 @@ void liveFeed(void* param)
 				colorImg.setTo(Scalar(255, 0, 0), mask_high); // kolor niebieski
 			}
 
-			// do autoekspozycji (srednia jasnosc w kwadracie)
 			if (logicVariables.auto_exp) {
 				average_brightness = 0.0;
-				for (int i = (CAM_WIDTH / 2) - 1500; i <= (CAM_WIDTH / 2) + 1500; i += 1500) {
-					for (int j = (CAM_HEIGHT / 2) - 1000; j <= (CAM_HEIGHT / 2) + 1000; j += 1000) {
+				int count = 0; // To count actual samples considered
+				// Adjust step size to evenly distribute samples
+				int stepX = 1500 / 3;
+				int stepY = 1000 / 3;
+				for (int i = (CAM_WIDTH / 2) - 1500; i <= (CAM_WIDTH / 2) + 1500; i += stepX) {
+					for (int j = (CAM_HEIGHT / 2) - 1000; j <= (CAM_HEIGHT / 2) + 1000; j += stepY) {
 						average_brightness += cam->grayImg.at<uchar>(j, i);
 						circle(colorImg, Point(i, j), 30, Scalar(0, 255, 255), -1, 8, 0);
+						count++;
 					}
 				}
-				average_brightness /= 9;
-				cam->br_max = (uint8)average_brightness; // dla regulatora w trzecim watku
+				if (count > 0) { // Ensure we avoid division by zero
+					average_brightness /= count;
+				}
+				cam->br_max = (uint8_t)average_brightness; // Correct casting to uint8_t
 				rectangle(colorImg, Point(CAM_WIDTH - 250, 250), Point(CAM_WIDTH, 0), CV_RGB(255, 255, 0), 10, CV_AA, 0);
 				putText(colorImg, to_string(cam->br_max), Point(CAM_WIDTH - 250 + 25, 155), fontFace, fontScale, Scalar(0, 255, 255), 10);
 			}
@@ -173,7 +180,7 @@ void liveFeed(void* param)
 			else {
 				putText(colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 			}
-			imshow(cam->window, colorImg); // wyswietlenie obrazu
+			imshow(cam->window, hsvImg); // wyswietlenie obrazu
 		}
 		EnterCriticalSection(&cs);
 		localstrm = cam->status;
@@ -477,9 +484,36 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	}
 }
 
-//void findBall(Mat& hsvImg, Mat& colorImg) {
-//
-//}
+void findBall(Mat& bgrImg, Mat& colorImg) {
+	// Definiowanie zakresu HSV dla koloru pomarañczowego
+	Scalar lowerBound(10, 100, 100);
+	Scalar upperBound(25, 255, 255);
+	Mat hsvImg, mask;
+
+	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
+	inRange(hsvImg, lowerBound, upperBound, mask);
+
+	vector<std::vector<cv::Point>> contours;
+	findContours(mask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+
+	bool ballDetected = false;
+	Point2f center;
+	float radius = 0;
+
+	for (const auto& contour : contours) {
+		double area = cv::contourArea(contour);
+		if (area > 100) {
+			cv::minEnclosingCircle(contour, center, radius);
+			ballDetected = true;
+			break;
+		}
+	}
+
+		// Rysowanie rzeczywistej pozycji pi³eczki
+		circle(colorImg, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);
+		circle(colorImg, center, 3, cv::Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
+	}
+
 
 
 void cleanBorder(Mat& img) {
@@ -596,9 +630,9 @@ static void pylonImageToCvMat(const void* pBuffer, int width, int height, Mat& i
 	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat z danych obrazu Pylon
 }
 
-static void pylonImageToCvHsvMat(const void* pBuffer, int width, int height, Mat& image)
+static void pylonImageToCvBayerMat(const void* pBuffer, int width, int height, Mat& image)
 {
-	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat Hsv z danych obrazu Pylon
+	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat Hsv Bayer rgb z danych obrazu Pylon
 }
 
 vector<Point2f> undistortPointsMG(pCamera cam, vector<Point2f> good_points_distorted)
