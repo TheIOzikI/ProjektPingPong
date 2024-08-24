@@ -17,7 +17,7 @@ void liveFeed(void* param)
 	PylonGrabResult_t result;
 	uint64 ctx;
 	uint8 i = 0, localstrm, fot_num_1 = 0, fot_num_2 = 0;
-	Mat mask_low, mask_high, colorImg, binImg, calibImg, hsvImg;
+	Mat mask_low, mask_high, colorImg, binImg, calibImg, bgrImg;
 	vector<Point2f> distorted_points(56), undistorted_points(56);
 	bool isReady;
 	int fontFace = FONT_HERSHEY_DUPLEX;
@@ -80,18 +80,18 @@ void liveFeed(void* param)
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
 			// przepisanie z bufora do Mat'a
-			pylonImageToCvBayerMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->bgrImg);
+			pylonImageToCvBayerMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->preBgrImg);
 
 			// detekcja markerow (dziala tylko gdy kalibracja)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
-			cvtColor(cam->bgrImg, hsvImg, COLOR_BayerBG2BGR);
+			cvtColor(cam->preBgrImg, bgrImg, COLOR_BayerBG2BGR);
 
 			// kopiowanie do obrazka RGB
 			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
-			//findBall(cam->bgrImg, colorImg);
+			findBall(bgrImg, colorImg);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -180,7 +180,7 @@ void liveFeed(void* param)
 			else {
 				putText(colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 			}
-			imshow(cam->window, hsvImg); // wyswietlenie obrazu
+			imshow(cam->window, colorImg); // wyswietlenie obrazu
 		}
 		EnterCriticalSection(&cs);
 		localstrm = cam->status;
@@ -483,11 +483,18 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 		}
 	}
 }
+//Clicked at (360, 245)
+//HSV Value : H: 15, S : 255, V : 112
+//Clicked at(413, 853)
+//HSV Value : H: 14, S : 255, V : 107
+
+
+
 
 void findBall(Mat& bgrImg, Mat& colorImg) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
-	Scalar lowerBound(10, 100, 100);
-	Scalar upperBound(25, 255, 255);
+	Scalar lowerBound(10, 200, 100);
+	Scalar upperBound(50, 255, 150);
 	Mat hsvImg, mask;
 
 	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
