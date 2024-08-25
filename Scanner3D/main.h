@@ -64,7 +64,8 @@ typedef unsigned long long	uint64;
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			10000U		
 #define CAM_EXP_DEFAULT		4000U		
-#define CAM_GAIN_DEFAULT	0.8
+#define CAM_GAIN_DEFAULT	10
+#define CAM_GAMMA			0.9
 
 // markers parameters
 #define TR_MARKER			15U

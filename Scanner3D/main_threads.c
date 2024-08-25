@@ -483,18 +483,11 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 		}
 	}
 }
-//Clicked at (360, 245)
-//HSV Value : H: 15, S : 255, V : 112
-//Clicked at(413, 853)
-//HSV Value : H: 14, S : 255, V : 107
-
-
-
 
 void findBall(Mat& bgrImg, Mat& colorImg) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
-	Scalar lowerBound(10, 200, 100);
-	Scalar upperBound(50, 255, 150);
+	Scalar lowerBound(1, 94, 88);
+	Scalar upperBound(18, 255, 214);
 	Mat hsvImg, mask;
 
 	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
