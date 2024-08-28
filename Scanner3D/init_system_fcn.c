@@ -147,10 +147,6 @@ bool initCameras(void)
 		odprintf("[Info] Set Width and Height\n");
 	}
 
-	///////////////////////////////kolorowy obraz /////////////////////////////////////
-	errRes = PylonDeviceFeatureFromString(hCam1, "PixelFormat", "BayerRG8");	pylonCheck(errRes);
-	errRes = PylonDeviceFeatureFromString(hCam2, "PixelFormat", "BayerRG8");	pylonCheck(errRes);
-
 	////////////////// ustawienie gaina //////////////////
 	/* Set the "raw" gain value to specified value */
 	errRes = PylonDeviceSetFloatFeature(hCam1, "Gain", CAM_GAIN_DEFAULT);
@@ -166,11 +162,6 @@ bool initCameras(void)
 	/* Set the light source preset for daylight (at about 6500K) */
 	errRes = PylonDeviceFeatureFromString(hCam1, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
 	errRes = PylonDeviceFeatureFromString(hCam2, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
-
-	/////////////white balance//////////
-	/* Enable Balance White Auto by setting the operating mode to Once */
-	//errRes = PylonDeviceFeatureFromString(hCam1, "BalanceWhiteAuto", "Once");		pylonCheck(errRes);
-	//errRes = PylonDeviceFeatureFromString(hCam2, "BalanceWhiteAuto", "Once");		pylonCheck(errRes);
 
 	////////////////// ustawienie ekspozycji //////////////////
 	/* Determine the current exposure time */

@@ -63,9 +63,9 @@ typedef unsigned long long	uint64;
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			10000U		
-#define CAM_EXP_DEFAULT		4000U		
-#define CAM_GAIN_DEFAULT	10
-#define CAM_GAMMA			0.9
+#define CAM_EXP_DEFAULT		3000U		
+#define CAM_GAIN_DEFAULT	15
+#define CAM_GAMMA			10
 
 // markers parameters
 #define TR_MARKER			15U
@@ -77,8 +77,8 @@ typedef unsigned long long	uint64;
 #define MKR_COLOR			1 // 0=czarny srodek, 1=bialy srodek
 #define MIN_RECT_RATIO		0.7/1.0
 #define MAX_RECT_RATIO		1.0/0.7
-#define MIN_CODE			0
-#define MAX_CODE			54
+#define MIN_CODE			8
+#define MAX_CODE			23
 
 // scanning parameters
 #define SAVE_MAPS_TO_FILE   0

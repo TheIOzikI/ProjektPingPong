@@ -486,8 +486,8 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 
 void findBall(Mat& bgrImg, Mat& colorImg) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
-	Scalar lowerBound(1, 94, 88);
-	Scalar upperBound(18, 255, 214);
+	Scalar lowerBound(10, 230, 90);
+	Scalar upperBound(20, 255, 250);
 	Mat hsvImg, mask;
 
 	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
