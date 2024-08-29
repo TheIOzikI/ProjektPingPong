@@ -11,6 +11,7 @@ extern HANDLE serialHandle;
 extern ApplicationWindows appWindows;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION cs;
+extern xRef RefPattern[54];
 
 __inline void errMsg(wchar_t* title, wchar_t* desc) {
 	swprintf_s(errTitle, 50, L"%s", title);
@@ -132,8 +133,8 @@ bool initCameras(void)
 	isAvail = PylonDeviceFeatureIsWritable(hCam1, "GevSCPSPacketSize");
 	isAvail &= PylonDeviceFeatureIsWritable(hCam2, "GevSCPSPacketSize");
 	if (isAvail) {
-	errRes = PylonDeviceSetIntegerFeature(hCam1, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
-	errRes = PylonDeviceSetIntegerFeature(hCam2, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
+		errRes = PylonDeviceSetIntegerFeature(hCam1, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
+		errRes = PylonDeviceSetIntegerFeature(hCam2, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
 	}
 
 	////////////////// ustawienie rozdzielczoœci //////////////////
@@ -258,8 +259,64 @@ void tryInitCameras(void* param)
 	///////////////////////////////////////
 	//:::Wszytskie funkcje INICJUJ¥CE :::::
 
-	// wczytuje model wzorca 3D do pozycjonowania kamery
-	//FILE* file;
+	//  model wzorca 3D do pozycjonowania kamery
+	//vector<Point3f> refPattern = {
+	//	Point3f(-0.079021, -147.427491, -12.049359),	//marker nr 19
+	//	Point3f(671.605864, -1277.323964, -1.870671),	//marker nr 17
+	//	Point3f(0.629395, -1286.330403, 0.199855),		//marker nr 16
+	//	Point3f(-671.607597, -1286.770799, 2.383148),	//marker nr 8
+	//	Point3f(-679.344107, 141.059130, -12.397022),	//marker nr 18
+	//	Point3f(-671.136300, 1281.687343, 0.199886),	//marker nr 23
+	//	Point3f(5.348128, 1281.746822, 0.211561),		//marker nr 22
+	//	Point3f(671.136168, 1282.407420, 0.199931),		//marker nr 21
+	//	Point3f(671.905068, 147.375353, -12.695638) };	//marker nr 20
+
+	RefPattern[0].code = 19;
+	RefPattern[0].x = -0.079021;
+	RefPattern[0].y = -147.427491;
+	RefPattern[0].z = -12.049359;
+
+	RefPattern[1].code = 17;
+	RefPattern[1].x = 671.605864;
+	RefPattern[1].y = -1277.323964;
+	RefPattern[1].z = -1.870671;
+
+	RefPattern[2].code = 16;
+	RefPattern[2].x = 0.629395;
+	RefPattern[2].y = -1286.330403;
+	RefPattern[2].z = 0.199855;
+
+	RefPattern[3].code = 8;
+	RefPattern[3].x = -671.607597;
+	RefPattern[3].y = -1286.330403;
+	RefPattern[3].z = 2.383148;
+
+	RefPattern[4].code = 18;
+	RefPattern[4].x = -679.344107;
+	RefPattern[4].y = 141.059130;
+	RefPattern[4].z = -12.397022;
+
+	RefPattern[5].code = 23;
+	RefPattern[5].x = -671.136300;
+	RefPattern[5].y = 1281.687343;
+	RefPattern[5].z = 0.199886;
+
+	RefPattern[6].code = 22;
+	RefPattern[6].x = 5.348128;
+	RefPattern[6].y = 1281.746822;
+	RefPattern[6].z = 0.211561;
+
+	RefPattern[7].code = 21;
+	RefPattern[7].x = 671.136168;
+	RefPattern[7].y = 1282.407420;
+	RefPattern[7].z = 0.199931;
+
+	RefPattern[8].code = 20;
+	RefPattern[8].x = 671.905068;
+	RefPattern[8].y = 147.375353;
+	RefPattern[8].z = -12.695638;
+
+		//FILE* file;
 	//float tempArr[4 * 54] = { 0 };
 	//fopen_s(&file, REF_PATTERN_FILE, "rb");
 	//if (file != NULL) {

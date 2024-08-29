@@ -173,6 +173,8 @@ void createBlocks(void)
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 50.0, 50, 50, &cam_lens, NULL); // obiektyw kamery
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 100.0, 50, 50, &holder_1, NULL); // uchwyt narzędziowy
 	D3DXCreateCylinder(d3ddev, 25.0, 10.0, 60.0, 50, 50, &holder_2, NULL); // uchwyt narzędziowy
+	//D3DXCreateBox(d3ddev, 816.0, 1570.0, 813.0, &tennis_table, NULL); // stół pingpongowy
+	//D3DXCreateBox(d3ddev, 816.0, 1570.0, 813.0, &tennis_table_net, NULL); // siatka stół pingpongowy
 
 	HDC hdc = CreateCompatibleDC(0);
 	LOGFONT lf;

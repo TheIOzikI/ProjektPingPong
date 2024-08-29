@@ -16,6 +16,7 @@
 Camera cam1 = { 0 }, cam2 = { 0 };
 LogicalVariables logicVariables; // wszystkie zmienne logiczne i tryby
 ApplicationWindows appWindows;
+xRef RefPattern[54];
 
 double dT; // wyliczony czas trwania petli głównej
 
@@ -188,7 +189,8 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 
 			// przycisk nr 1! - 
 		case MNU_EMPTY_1:
-
+			ExtrinsicParam(&cam1);
+			ExtrinsicParam(&cam2);
 			break;
 
 			// przycisk nr 2! - 

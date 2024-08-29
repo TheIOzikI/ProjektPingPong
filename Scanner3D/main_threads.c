@@ -9,6 +9,7 @@ extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
 extern LogicalVariables logicVariables;
 extern ApplicationWindows appWindows;
+extern xRef RefPattern[54];
 
 void liveFeed(void* param)
 {
@@ -514,8 +515,6 @@ void findBall(Mat& bgrImg, Mat& colorImg) {
 		circle(colorImg, center, 3, cv::Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
 	}
 
-
-
 void cleanBorder(Mat& img) {
 	Scalar el;
 	uint16_t i;
@@ -663,4 +662,168 @@ vector<Point2f> undistortPointsMG(pCamera cam, vector<Point2f> good_points_disto
 		//circle(BL, Point(good_points_undistorted[i].x, good_points_undistorted[i].y), 4, Scalar(255, 255, 255), FILLED);
 	}
 	return good_points_undistorted;
+}
+
+void ExtrinsicParam(void* param)
+{
+	//POPRAWIÆ DLA DOWLNEJ LICZBY WIDOCZNYCH MARKEROW A NIE 13 !!!!!!!!!!!!!!!
+	pCamera cam = (pCamera)param;
+
+	CvMat* mkref, * mkimg, * A, * K, * rotv, * rot, * trans;
+	//Marker	M[54] = { 0 }, MU[54] = { 0 };
+	// tymczasowe macierze
+	A = cvCreateMat(3, 3, CV_32F);
+	rotv = cvCreateMat(3, 1, CV_32F);
+	rot = cvCreateMat(3, 3, CV_32F);
+	trans = cvCreateMat(3, 1, CV_32F);
+	K = cvCreateMat(5, 1, CV_32F);
+
+	algn(16) float	R[9] = { 0 }, Rinv[9] = { 0 }, T[3] = { 0 }, Tinv[3] = { 0 };
+	uint8 i = 0, found_mkr = 0, li = 0, c;
+
+	//CvMat* I = cvCreateMat(CAM_HEIGHT, CAM_WIDTH, CV_8UC1);
+	//CvMat* binImg = cvCreateMat(CAM_HEIGHT, CAM_WIDTH, CV_8UC1);
+	//CvMat* tImg = cvCreateMat(CAM_HEIGHT, CAM_WIDTH, CV_8UC1);
+	//uint8  br_max = 0;
+	// BRAKUJE PRZYGOTOWANIA ImPattern
+	//CaptureFrame(cam, I->data.ptr, false);
+	/*EnterCriticalSection(&cs); cam->status = 2; LeaveCriticalSection(&cs);*/
+	// szukanie i wydruk markerów
+	//FindMarkers(cam->grayImg, binImg, tImg, M, MU, 15, 27, 1, &br_max, 0, mkr_color); // mode = 1 -> marekry wszytskie, nawet powtarzajace sie, kolejno do struktury
+
+	// zliczenie markerow jednoczesnie widocznych na obrazie i nalezacych do referencja³u
+	for (i = 0; i < 54; i++) {
+		c = cam->coded_markers[i].code;
+		if (cam->coded_markers[i].isSet && RefPattern[c - 1].code > 0) {
+			found_mkr++;
+		}
+	}
+
+	if (found_mkr == 9)
+	{
+		mkimg = cvCreateMat(found_mkr, 2, CV_32F);
+		mkref = cvCreateMat(found_mkr, 3, CV_32F);
+
+		// przepisanie referencja³u i punktów obrazowych do cvmat-ów
+		for (i = 0; i < 54; i++) {
+			c = cam->coded_markers[i].code;
+			if (cam->coded_markers[i].isSet && RefPattern[c - 1].code > 0)
+			{
+				mkimg->data.fl[li * 2] = cam->coded_markers[i].x; //kolumna
+				mkimg->data.fl[li * 2 + 1] = cam->coded_markers[i].y; //wiersz
+				mkref->data.fl[li * 3] = RefPattern[c - 1].x;
+				mkref->data.fl[li * 3 + 1] = RefPattern[c - 1].y;
+				mkref->data.fl[li * 3 + 2] = RefPattern[c - 1].z;
+				//odprintf("code:%d	ref: %f	%f	%f| img: %f	%f\n", RefPattern[c - 1].code, mkref->data.fl[i * 3], mkref->data.fl[i * 3 + 1], mkref->data.fl[i * 3 + 2], mkimg->data.fl[i * 2], mkimg->data.fl[i * 2 + 1]);
+				li++;
+			}
+		}
+
+		for (i = 0; i < 9; i++) {
+			A->data.fl[i] = cam->A[ind9to16[i]];
+		}
+		cvSetData(K, cam->K, sizeof(float));
+		//PrintMatFloat("A:", A);
+		//PrintMatFloat("K:", K);
+
+		// wyznaczenie parametrów zewnetrznych
+		cvFindExtrinsicCameraParams2(mkref, mkimg, A, K, rotv, trans, 0);
+		cvRodrigues2(rotv, rot, 0);
+
+		// tworzenie wszystkich macierzy transformacji T R RT RTinv
+		memcpy(Rinv, rot->data.fl, 9 * sizeof(float));
+		I3x3_SSE(Rinv, R);
+
+		memcpy(Tinv, trans->data.fl, 3 * sizeof(float));
+		cam->Tinv[0] = T[0] = -Tinv[0];
+		cam->Tinv[1] = T[1] = -Tinv[1];
+		cam->Tinv[2] = T[2] = -Tinv[2];
+		M3x1_SSE(R, T, T);
+
+		//przepisanie z macierzy 3x3 do  4x4 
+		for (i = 0; i < 9; i++) {
+			cam->R[i] = R[i];
+			cam->R[ind9to16[i]] = R[i];
+			cam->RT[ind9to16[i]] = R[i];
+			cam->RTinv[ind9to16[i]] = Rinv[i];
+		}
+		cam->RT[12] = cam->RTinv[12] = 0.0;
+		cam->RT[13] = cam->RTinv[13] = 0.0;
+		cam->RT[14] = cam->RTinv[14] = 0.0;
+		cam->RT[15] = cam->RTinv[15] = cam->R[15] = 1.0;
+		cam->RT[3] = T[0];
+		cam->RT[7] = T[1];
+		cam->RT[11] = T[2];
+		cam->T[0] = T[0];
+		cam->T[1] = T[1];  //chyb NIEPOTRZENNA
+		cam->T[2] = T[2];
+		cam->RTinv[3] = Tinv[0];
+		cam->RTinv[7] = Tinv[1];
+		cam->RTinv[11] = Tinv[2];
+
+		//PrintArrFloat("RT", cam->RT, 4, 4);
+		//PrintArrFloat("R", cam->R, 4, 4);
+		//PrintArrFloat("T", cam->T, 3, 1);
+		//PrintArrFloat("R", cam->R, 4, 4);
+		//PrintCamParams(cam);
+
+		if (cam->cam_num == 1) saveCamParams(cam, CAM_LEFT_PARAM_FILE);
+		else saveCamParams(cam, CAM_RIGHT_PARAM_FILE);
+		odprintf("[Info] Zapisano parametry po³o¿enia kamer!\n");
+	}
+	else
+	{
+		// komunikat w oknie, ze za malo widocznych markerow na wzorcu
+		odprintf("[Info] Zbyt ma³o widocznych markerów: %d z 9!\n", found_mkr);
+	}
+	cvReleaseMat(&A);
+	cvReleaseMat(&K);
+	cvReleaseMat(&rot);
+	cvReleaseMat(&rotv);
+	cvReleaseMat(&trans);
+	cvReleaseMat(&mkref);
+	cvReleaseMat(&mkimg);
+	odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
+}
+
+void saveCamParams(pCamera cam, const char* name) {
+	CamData data = { 0 };
+	FILE* file = nullptr;
+	errno_t err;
+
+	data.a11 = cam->A[0];
+	data.a12 = cam->A[1];
+	data.a13 = cam->A[2];
+	data.a21 = cam->A[4];
+	data.a22 = cam->A[5];
+	data.a23 = cam->A[6];
+	data.a31 = cam->A[8];
+	data.a32 = cam->A[9];
+	data.a33 = cam->A[10];
+
+	data.k1 = cam->K[0];
+	data.k2 = cam->K[1];
+	data.k3 = cam->K[2];
+	data.k4 = cam->K[3];
+	data.k5 = cam->K[4];
+
+	data.r11 = cam->RT[0];
+	data.r12 = cam->RT[1];
+	data.r13 = cam->RT[2];
+	data.r21 = cam->RT[4];
+	data.r22 = cam->RT[5];
+	data.r23 = cam->RT[6];
+	data.r31 = cam->RT[8];
+	data.r32 = cam->RT[9];
+	data.r33 = cam->RT[10];
+
+	data.t11 = cam->RT[3];
+	data.t21 = cam->RT[7];
+	data.t31 = cam->RT[11];
+
+	err = fopen_s(&file, name, "wb");
+	if (file) {
+		fwrite(&data, sizeof(CamData), 1, file);
+		fclose(file);
+	}
 }

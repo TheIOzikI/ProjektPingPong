@@ -17,6 +17,8 @@ static string toStringWithPrecision(double, int);
 static void pylonImageToCvMat(const void*, int, int, Mat&);
 static void pylonImageToCvBayerMat(const void*, int, int, Mat&);
 vector<Point2f> undistortPointsMG(pCamera, vector<Point2f>);
+void ExtrinsicParam(void* param);
+void saveCamParams(pCamera cam, const char* name);
 
 // tablica podmiany kodów markerów na ich numery (zgodne z wydrukiem)
 static const uint8 codesLUT[] = {

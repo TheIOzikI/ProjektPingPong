@@ -40,7 +40,6 @@ typedef unsigned long long	uint64;
 // files options
 #define CAM_LEFT_PARAM_FILE  "config\\LEFT_cam_param.bin" // actual camera parameters
 #define CAM_RIGHT_PARAM_FILE "config\\RIGHT_cam_param.bin" // actual camera parameters
-#define REF_PATTERN_FILE	 "config\\calibration_board_ref.bin" // calibration board (points)
 
 // camera parameters
 #define NUM_BUFFERS			1
@@ -195,6 +194,13 @@ typedef union _Point4 {
 		float x, y, z, w;
 	} el;
 } Point4, far* lpPoint4, * pPoint4;
+
+// Struktura dla markerów xreferencyjnych z krzyża kalibracyjnego
+
+struct xRef {
+	unsigned long code;
+	float x, y, z;
+};
 
 // struktura dla osi skanera
 struct ThreePoints3f {
