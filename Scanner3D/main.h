@@ -76,8 +76,8 @@ typedef unsigned long long	uint64;
 #define MKR_COLOR			1 // 0=czarny srodek, 1=bialy srodek
 #define MIN_RECT_RATIO		0.7/1.0
 #define MAX_RECT_RATIO		1.0/0.7
-#define MIN_CODE			8
-#define MAX_CODE			23
+#define MIN_CODE			0
+#define MAX_CODE			56
 
 // scanning parameters
 #define SAVE_MAPS_TO_FILE   0
