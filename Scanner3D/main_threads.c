@@ -699,7 +699,7 @@ void ExtrinsicParam(void* param)
 		}
 	}
 
-	if (found_mkr == 9)
+	if (found_mkr == 3)
 	{
 		mkimg = cvCreateMat(found_mkr, 2, CV_32F);
 		mkref = cvCreateMat(found_mkr, 3, CV_32F);
@@ -714,7 +714,7 @@ void ExtrinsicParam(void* param)
 				mkref->data.fl[li * 3] = RefPattern[c - 1].x;
 				mkref->data.fl[li * 3 + 1] = RefPattern[c - 1].y;
 				mkref->data.fl[li * 3 + 2] = RefPattern[c - 1].z;
-				//odprintf("code:%d	ref: %f	%f	%f| img: %f	%f\n", RefPattern[c - 1].code, mkref->data.fl[i * 3], mkref->data.fl[i * 3 + 1], mkref->data.fl[i * 3 + 2], mkimg->data.fl[i * 2], mkimg->data.fl[i * 2 + 1]);
+				odprintf("code:%d	ref: %f	%f	%f| img: %f	%f\n", RefPattern[c - 1].code, mkref->data.fl[i * 3], mkref->data.fl[i * 3 + 1], mkref->data.fl[i * 3 + 2], mkimg->data.fl[i * 2], mkimg->data.fl[i * 2 + 1]);
 				li++;
 			}
 		}

@@ -420,6 +420,7 @@ void dxRenderFrame(void)
 		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
 		//setColor(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
 		//cam_lens->DrawSubset(0);
+		box_plate->DrawSubset(0);
 
 		///////// ::: KAMERA PRAWA ::: ///////
 		D3DXMatrixScaling(&matScale, scaleXYZ_2, scaleXYZ_2, 0.2f); // podpis

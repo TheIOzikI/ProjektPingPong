@@ -62,9 +62,9 @@ typedef unsigned long long	uint64;
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			10000U		
-#define CAM_EXP_DEFAULT		3000U		
-#define CAM_GAIN_DEFAULT	15
-#define CAM_GAMMA			10
+#define CAM_EXP_DEFAULT		6000U		
+#define CAM_GAIN_DEFAULT	3
+#define CAM_GAMMA			1
 
 // markers parameters
 #define TR_MARKER			15U
