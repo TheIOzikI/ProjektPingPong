@@ -333,8 +333,8 @@ void reconstructMarkers3D(void)
 		for (k = 0; k < 56; k++) {
 			if (cam1.coded_markers_buff[k].isSet && cam2.coded_markers_buff[k].isSet) {
 				m3d.isSet[k] = true;
-				odprintf("1 [Bufor] kod[%d]	%f	%f\n", cam1.coded_markers_buff[k].code, cam1.coded_markers_buff[k].x, cam1.coded_markers_buff[k].y);
-				odprintf("2 [Bufor] kod[%d]	%f	%f\n", cam2.coded_markers_buff[k].code, cam2.coded_markers_buff[k].x, cam2.coded_markers_buff[k].y);
+				//odprintf("1 [Bufor] kod[%d]	%f	%f\n", cam1.coded_markers_buff[k].code, cam1.coded_markers_buff[k].x, cam1.coded_markers_buff[k].y);
+				//odprintf("2 [Bufor] kod[%d]	%f	%f\n", cam2.coded_markers_buff[k].code, cam2.coded_markers_buff[k].x, cam2.coded_markers_buff[k].y);
 				plmk[k].el.x = cam1.coded_markers_buff[k].x;
 				plmk[k].el.y = cam1.coded_markers_buff[k].y;
 				prmk[k].el.x = cam2.coded_markers_buff[k].x;
@@ -349,7 +349,7 @@ void reconstructMarkers3D(void)
 	}
 
 	if (li > 0) {
-		//odprintf("znalazlem %d markerow\n", li);
+		odprintf("znalazlem %d markerow\n", li);
 		li = 0;
 		// tutaj tworzenie wektktorów vr1 vr3
 		// (reprojekcja przez AcInv tylko z rotacj¹)
@@ -698,8 +698,8 @@ void ExtrinsicParam(void* param)
 			found_mkr++;
 		}
 	}
-
-	if (found_mkr == 3)
+	odprintf("[Info] Iloœæ widocznych markerów: %d z 9!\n", found_mkr);
+	if (found_mkr == 9)
 	{
 		mkimg = cvCreateMat(found_mkr, 2, CV_32F);
 		mkref = cvCreateMat(found_mkr, 3, CV_32F);
@@ -770,20 +770,29 @@ void ExtrinsicParam(void* param)
 		if (cam->cam_num == 1) saveCamParams(cam, CAM_LEFT_PARAM_FILE);
 		else saveCamParams(cam, CAM_RIGHT_PARAM_FILE);
 		odprintf("[Info] Zapisano parametry po³o¿enia kamer!\n");
+
+		cvReleaseMat(&A);
+		cvReleaseMat(&K);
+		cvReleaseMat(&rot);
+		cvReleaseMat(&rotv);
+		cvReleaseMat(&trans);
+		cvReleaseMat(&mkref);
+		cvReleaseMat(&mkimg);
+		odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
 	}
 	else
 	{
 		// komunikat w oknie, ze za malo widocznych markerow na wzorcu
 		odprintf("[Info] Zbyt ma³o widocznych markerów: %d z 9!\n", found_mkr);
 	}
-	cvReleaseMat(&A);
-	cvReleaseMat(&K);
-	cvReleaseMat(&rot);
-	cvReleaseMat(&rotv);
-	cvReleaseMat(&trans);
-	cvReleaseMat(&mkref);
-	cvReleaseMat(&mkimg);
-	odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
+	//cvReleaseMat(&A);
+	//cvReleaseMat(&K);
+	//cvReleaseMat(&rot);
+	//cvReleaseMat(&rotv);
+	//cvReleaseMat(&trans);
+	//cvReleaseMat(&mkref);
+	//cvReleaseMat(&mkimg);
+	//odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
 }
 
 void saveCamParams(pCamera cam, const char* name) {

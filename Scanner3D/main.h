@@ -62,13 +62,13 @@ typedef unsigned long long	uint64;
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			10000U		
-#define CAM_EXP_DEFAULT		6000U		
-#define CAM_GAIN_DEFAULT	3
-#define CAM_GAMMA			1
+#define CAM_EXP_DEFAULT		2000U		
+#define CAM_GAIN_DEFAULT	15
+#define CAM_GAMMA			2
 
 // markers parameters
 #define TR_MARKER			15U
-#define BIN_THRESHOLD		40 // binarization threshold for markers // 60
+#define BIN_THRESHOLD		30 // binarization threshold for markers // 60
 #define MKR_PIX_ERR		    5.0 // blad centrycznosci pol markera
 #define MKR_MIN_RATIO       0.4 // stosunki srednic
 #define MKR_MAX_RATIO       0.7
