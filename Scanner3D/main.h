@@ -187,6 +187,14 @@ typedef struct _Marker3D {
 	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
+// struktura przechowująca pozycję piłeczki po rekonstrukcji
+
+typedef struct _Ball3D {
+	bool isSet;        // Czy pozycja piłki została ustawiona
+	float x, y, z;     // Współrzędne 3D piłki
+	float err;         // Błąd rekonstrukcji
+} Ball3D;
+
 // struktura dla skanowanych punktow
 typedef union _Point4 {
 	float raw[4];

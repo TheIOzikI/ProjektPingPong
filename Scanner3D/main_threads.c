@@ -4,6 +4,7 @@
 #include "graphic_fcn.h"
 
 Marker3D m3d;
+Ball3D ball3D;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
@@ -540,46 +541,54 @@ void findBall(Mat& grayImg, Mat& colorImg) {
 
 void reconstructBall3D(void)
 {
-	uint8 i = 0, k = 0, li = 0;
-	float t0[3]{}, vx13[3]{}, g[3]{};
-	struct Det { float a, b, W; } det = { 0.0 };
-	struct Coords { float x, y, z; } pos = { 0.0 };
-	pPoint4 vr1 = NULL, vr3 = NULL, plBall = NULL, prBall = NULL;
-	algn(16) float  Rl[16] = { 0.0 }, Rr[16] = { 0.0 },
-		RAinvL[16] = { 0.0 }, RAinvR[16] = { 0.0 };
+	uint8 i = 0;
+	float x1, y1, x2, y2, z1, z2;
+	pPoint4 ball_pointsL = NULL, ball_pointsR = NULL;
 
-	// Inicjalizacja macierzy rotacji kamer
-	for (i = 0; i < 9; ++i) {
-		Rl[ind9to16[i]] = cam1.RT[ind9to16[i]];
-		Rr[ind9to16[i]] = cam2.RT[ind9to16[i]];
-	}
-	Rl[15] = 1.0; Rr[15] = 1.0;
+	// Alokacja pamiêci dla pozycji pi³ki na lewym i prawym obrazie
+	ball_pointsL = (pPoint4)_aligned_malloc(sizeof(Point4), 16);
+	ball_pointsR = (pPoint4)_aligned_malloc(sizeof(Point4), 16);
 
-	// Alokacja pamiêci dla pozycji pi³eczki na lewym i prawym obrazie
-	plBall = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
-	prBall = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
-
-	if (plBall != NULL && prBall != NULL) {
-		vr1 = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
-		vr3 = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
-
-		// Sprawdzenie, czy pi³eczka jest wykryta na obu obrazach
+	if (ball_pointsL != NULL && ball_pointsR != NULL) {
 		if (cam1.ballDetected && cam2.ballDetected) {
-			m3d.isSet[0] = true;
+			// Przypisanie pozycji pi³ki z obu kamer
+			ball_pointsL[0].el.x = (cam1.ballCenter.x - cam1.Kc.at<double>(0, 2)) / cam1.Kc.at<double>(0, 0);
+			ball_pointsL[0].el.y = (cam1.ballCenter.y - cam1.Kc.at<double>(1, 2)) / cam1.Kc.at<double>(1, 1);
+			ball_pointsL[0].el.z = 1.0;
 
-			// Przepisanie pozycji pi³eczki z buforów kamer
-			plBall[0].el.x = cam1.ballCenter.x;
-			plBall[0].el.y = cam1.ballCenter.y;
-			prBall[0].el.x = cam2.ballCenter.x;
-			prBall[0].el.y = cam2.ballCenter.y;
+			ball_pointsR[0].el.x = (cam2.ballCenter.x - cam2.Kc.at<double>(0, 2)) / cam2.Kc.at<double>(0, 0);
+			ball_pointsR[0].el.y = (cam2.ballCenter.y - cam2.Kc.at<double>(1, 2)) / cam2.Kc.at<double>(1, 1);
+			ball_pointsR[0].el.z = 1.0;
 
-			plBall[0].raw[2] = plBall[0].raw[3] = 1.0f; // Wartoœci potrzebne do obliczeñ
-			prBall[0].raw[2] = prBall[0].raw[3] = 1.0f;
-			li++;
+			// Obliczenia wspó³rzêdnych 3D pi³ki
+			x1 = ball_pointsL[0].el.x;
+			y1 = ball_pointsL[0].el.y;
+			z1 = ball_pointsL[0].el.z;
+			x2 = ball_pointsR[0].el.x;
+			y2 = ball_pointsR[0].el.y;
+			z2 = ball_pointsR[0].el.z;
+
+			// Triangulacja
+			float denom = cam1.RT[8] * x2 - cam2.RT[8] * x1 - cam1.RT[9] * y2 + cam2.RT[9] * y1;
+			float wx = (cam1.RT[3] * x2 - cam2.RT[3] * x1 + cam1.RT[11] * y2 - cam2.RT[11] * y1 + cam2.RT[3] - cam1.RT[3]) / denom;
+			float wy = (cam1.RT[7] * x2 - cam2.RT[7] * x1 + cam1.RT[10] * y2 - cam2.RT[10] * y1 + cam2.RT[7] - cam1.RT[7]) / denom;
+			float wz = (cam1.RT[11] * x2 - cam2.RT[11] * x1 + cam1.RT[12] * y2 - cam2.RT[12] * y1 + cam2.RT[11] - cam1.RT[11]) / denom;
+
+			// Ustawienie wspó³rzêdnych w strukturze Ball3D
+			ball3D.isSet = true;
+			ball3D.x = wx;
+			ball3D.y = wy;
+			ball3D.z = wz;
+			ball3D.err = 0.0f;
+
 		}
 		else {
-			m3d.isSet[0] = false;
+			ball3D.isSet = false;
 		}
+
+		// Zwolnienie pamiêci
+		_aligned_free(ball_pointsL);
+		_aligned_free(ball_pointsR);
 	}
 }
 
