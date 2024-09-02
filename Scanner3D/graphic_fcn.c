@@ -6,12 +6,13 @@ LPDIRECT3DVERTEXBUFFER9 v_buffer = NULL;
 LPDIRECT3DINDEXBUFFER9 i_buffer = NULL;
 LPDIRECT3D9	d3d; // the pointer to our Direct3D interface
 LPD3DXMESH sphere_big, sphere_smallest, sphere_small, cam_lens, box_plate, box_cam,
-box_tool, box_body_bed, box_body_column, beam_p1, beam_p2, holder_1, holder_2, tennis_table, tennis_table_net;
+box_tool, box_body_bed, box_body_column, beam_p1, beam_p2, holder_1, holder_2, tennis_table, tennis_table_net, pingpong;
 ID3DXMesh* Text_L = 0, * Text_R = 0;
 float camXat = 0.0f, camYat = 0.0f, camZat = 0.0f, scaleXYZ = 1.0f; // camera look at point
 
 extern Camera cam1, cam2;
 extern Marker3D m3d;
+extern Ball3D ball3D;
 extern double dT;
 extern LogicalVariables logicVariables;
 extern ApplicationWindows appWindows;
@@ -129,6 +130,7 @@ void cleanD3D(void)
 	Text_R->Release();
 	tennis_table->Release();
 	tennis_table_net->Release();
+	pingpong->Release();
 }
 
 void initLight(void)
@@ -175,8 +177,11 @@ void createBlocks(void)
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 50.0, 50, 50, &cam_lens, NULL); // obiektyw kamery
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 100.0, 50, 50, &holder_1, NULL); // uchwyt narzędziowy
 	D3DXCreateCylinder(d3ddev, 25.0, 10.0, 60.0, 50, 50, &holder_2, NULL); // uchwyt narzędziowy
-	D3DXCreateBox(d3ddev, 3000.0, 1500.0, 10, &tennis_table, NULL); // stół pingpongowy
-	D3DXCreateBox(d3ddev, 1.0, 1500.0, 15, &tennis_table_net, NULL); // siatka stół pingpongowy
+	////////pingpong///////////////sprawdzić orentacje x-y
+	D3DXCreateBox(d3ddev, 274.0f, 152.5f, 2.0f, &tennis_table, NULL); // stół pingpongowy
+	D3DXCreateBox(d3ddev, 2.0f, 152.5f, 15.25f, &tennis_table_net, NULL); // siatka stół pingpongowy
+	D3DXCreateSphere(d3ddev, 2.0, 100, 100, &pingpong, NULL); // piłeczka pingpongowa 4cm srednicy
+	///////////////////////////////
 
 	HDC hdc = CreateCompatibleDC(0);
 	LOGFONT lf;
@@ -474,6 +479,28 @@ void dxRenderFrame(void)
 				sphere_small->DrawSubset(0);
 			}
 		}
+
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////
+		///////////////////////piłeczka do pingponga///////////////////////////////////////////////////////////////
+		if (ball3D.isSet) {
+
+			// Create translation matrix from ball's 3D coordinates
+			D3DXMatrixTranslation(&matTrans, ball3D.x, ball3D.y, ball3D.z);
+
+			// Multiply with the world transformation matrix
+			D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+
+			// Set the world transform to this matrix
+			d3ddev->SetTransform(D3DTS_WORLD, &temp);
+
+			// Set color for the ball (Diffuse RGBA, Ambient RGBA)
+			setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+
+			// Draw the ball using the small sphere mesh
+			pingpong->DrawSubset(0);
+		}
+
+	
 
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		////////////////////////////////////////// KONIEC RYSOWANIA BRYŁ //////////////////////////////////////////////
