@@ -349,7 +349,7 @@ void reconstructMarkers3D(void)
 	}
 
 	if (li > 0) {
-		odprintf("znalazlem %d markerow\n", li);
+		//odprintf("znalazlem %d markerow\n", li);
 		li = 0;
 		// tutaj tworzenie wektktorów vr1 vr3
 		// (reprojekcja przez AcInv tylko z rotacj¹)
@@ -430,8 +430,12 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	uint8 idxc = 0, idxu = 0, codeNum;
 	float ratio, x, y;
 
-	if (!mkr_color) threshold(img, bImg, BIN_THRESHOLD, 255, THRESH_BINARY); // czarny srodek
-	else threshold(img, bImg, BIN_THRESHOLD, 255, THRESH_BINARY_INV); // bialy srodek
+	int th_area = 151, th_const = 9;
+	if (!mkr_color) adaptiveThreshold(img, bImg, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, th_area, th_const);
+	else adaptiveThreshold(img, bImg, 255, ADAPTIVE_THRESH_MEAN_C, CV_THRESH_BINARY_INV, th_area, th_const);
+
+	//if (!mkr_color) threshold(img, bImg, BIN_THRESHOLD, 255, THRESH_BINARY); // czarny srodek
+	//else threshold(img, bImg, BIN_THRESHOLD, 255, THRESH_BINARY_INV); // bialy srodek
 
 	Mat kern = getStructuringElement(MORPH_RECT, Size(3, 3));
 	morphologyEx(bImg, bImg, MORPH_CLOSE, kern);
@@ -761,11 +765,11 @@ void ExtrinsicParam(void* param)
 		cam->RTinv[7] = Tinv[1];
 		cam->RTinv[11] = Tinv[2];
 
-		//PrintArrFloat("RT", cam->RT, 4, 4);
-		//PrintArrFloat("R", cam->R, 4, 4);
-		//PrintArrFloat("T", cam->T, 3, 1);
-		//PrintArrFloat("R", cam->R, 4, 4);
-		//PrintCamParams(cam);
+		printArrFloat("RT", cam->RT, 4, 4);
+		printArrFloat("R", cam->R, 4, 4);
+		printArrFloat("T", cam->T, 3, 1);
+		printArrFloat("R", cam->R, 4, 4);
+		printCamParams(cam);
 
 		if (cam->cam_num == 1) saveCamParams(cam, CAM_LEFT_PARAM_FILE);
 		else saveCamParams(cam, CAM_RIGHT_PARAM_FILE);

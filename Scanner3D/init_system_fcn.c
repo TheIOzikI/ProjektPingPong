@@ -271,50 +271,50 @@ void tryInitCameras(void* param)
 	//	Point3f(671.136168, 1282.407420, 0.199931),		//marker nr 21
 	//	Point3f(671.905068, 147.375353, -12.695638) };	//marker nr 20
 
-	RefPattern[0].code = 19;
-	RefPattern[0].x = -0.079021;
-	RefPattern[0].y = -147.427491;
-	RefPattern[0].z = -12.049359;
+	RefPattern[18].code = 19;
+	RefPattern[18].x = -0.079021;
+	RefPattern[18].y = -147.427491;
+	RefPattern[18].z = -12.049359;
 
-	RefPattern[1].code = 17;
-	RefPattern[1].x = 671.605864;
-	RefPattern[1].y = -1277.323964;
-	RefPattern[1].z = -1.870671;
+	RefPattern[16].code = 17;
+	RefPattern[16].x = 671.605864;
+	RefPattern[16].y = -1277.323964;
+	RefPattern[16].z = -1.870671;
 
-	RefPattern[2].code = 16;
-	RefPattern[2].x = 0.629395;
-	RefPattern[2].y = -1286.330403;
-	RefPattern[2].z = 0.199855;
+	RefPattern[15].code = 16;
+	RefPattern[15].x = 0.629395;
+	RefPattern[15].y = -1286.330403;
+	RefPattern[15].z = 0.199855;
 
-	RefPattern[3].code = 8;
-	RefPattern[3].x = -671.607597;
-	RefPattern[3].y = -1286.330403;
-	RefPattern[3].z = 2.383148;
+	RefPattern[7].code = 8;
+	RefPattern[7].x = -671.607597;
+	RefPattern[7].y = -1286.330403;
+	RefPattern[7].z = 2.383148;
 
-	RefPattern[4].code = 18;
-	RefPattern[4].x = -679.344107;
-	RefPattern[4].y = 141.059130;
-	RefPattern[4].z = -12.397022;
+	RefPattern[17].code = 18;
+	RefPattern[17].x = -679.344107;
+	RefPattern[17].y = 141.059130;
+	RefPattern[17].z = -12.397022;
 
-	RefPattern[5].code = 23;
-	RefPattern[5].x = -671.136300;
-	RefPattern[5].y = 1281.687343;
-	RefPattern[5].z = 0.199886;
+	RefPattern[22].code = 23;
+	RefPattern[22].x = -671.136300;
+	RefPattern[22].y = 1281.687343;
+	RefPattern[22].z = 0.199886;
 
-	RefPattern[6].code = 22;
-	RefPattern[6].x = 5.348128;
-	RefPattern[6].y = 1281.746822;
-	RefPattern[6].z = 0.211561;
+	RefPattern[21].code = 22;
+	RefPattern[21].x = 5.348128;
+	RefPattern[21].y = 1281.746822;
+	RefPattern[21].z = 0.211561;
 
-	RefPattern[7].code = 21;
-	RefPattern[7].x = 671.136168;
-	RefPattern[7].y = 1282.407420;
-	RefPattern[7].z = 0.199931;
+	RefPattern[20].code = 21;
+	RefPattern[20].x = 671.136168;
+	RefPattern[20].y = 1282.407420;
+	RefPattern[20].z = 0.199931;
 
-	RefPattern[8].code = 20;
-	RefPattern[8].x = 671.905068;
-	RefPattern[8].y = 147.375353;
-	RefPattern[8].z = -12.695638;
+	RefPattern[19].code = 20;
+	RefPattern[19].x = 671.905068;
+	RefPattern[19].y = 147.375353;
+	RefPattern[19].z = -12.695638;
 
 		//FILE* file;
 	//float tempArr[4 * 54] = { 0 };

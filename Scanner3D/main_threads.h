@@ -2,6 +2,7 @@
 
 #include "main.h"
 #include "graphic_fcn.h"
+#include "print_fcn.h"
 
 void liveFeed(void*);
 void liveDataProcessing(void*);

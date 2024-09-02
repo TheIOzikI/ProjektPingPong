@@ -16,7 +16,7 @@
 Camera cam1 = { 0 }, cam2 = { 0 };
 LogicalVariables logicVariables; // wszystkie zmienne logiczne i tryby
 ApplicationWindows appWindows;
-xRef RefPattern[54];
+xRef RefPattern[54] = { 0 };
 
 double dT; // wyliczony czas trwania petli głównej
 
@@ -163,8 +163,8 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 			20, BTN_HEIGHT + 20, 30, CAM_WINDOW_HEIGHT * 2 - 10, hwnd, (HMENU)i++, NULL, NULL);
 		SendMessage(appWindows.s_expTrackbar, TBM_SETRANGEMIN, TRUE, CAM_EXP_MIN);
 		SendMessage(appWindows.s_expTrackbar, TBM_SETRANGEMAX, TRUE, CAM_EXP_MAX);
-		SendMessage(appWindows.s_expTrackbar, TBM_SETPAGESIZE, 0, 1000);
-		SendMessage(appWindows.s_expTrackbar, TBM_SETTICFREQ, 1000, 0);
+		SendMessage(appWindows.s_expTrackbar, TBM_SETPAGESIZE, 0, 100);
+		SendMessage(appWindows.s_expTrackbar, TBM_SETTICFREQ, 100, 0);
 		SendMessage(appWindows.s_expTrackbar, TBM_SETPOS, TRUE, CAM_EXP_MAX + CAM_EXP_MIN - CAM_EXP_DEFAULT);
 
 		// DirectX accelerated 3D view window
