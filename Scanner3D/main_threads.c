@@ -18,7 +18,7 @@ void liveFeed(void* param)
 	PylonGrabResult_t result;
 	uint64 ctx;
 	uint8 i = 0, localstrm, fot_num_1 = 0, fot_num_2 = 0;
-	Mat mask_low, mask_high, colorImg, binImg, calibImg, bgrImg;
+	Mat mask_low, mask_high, colorImg, binImg, calibImg;
 	vector<Point2f> distorted_points(56), undistorted_points(56);
 	bool isReady;
 	int fontFace = FONT_HERSHEY_DUPLEX;
@@ -80,19 +80,14 @@ void liveFeed(void* param)
 			// przepisanie z bufora do Mat'a
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
-			// przepisanie z bufora do Mat'a
-			pylonImageToCvBayerMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->preBgrImg);
-
 			// detekcja markerow (dziala tylko gdy kalibracja)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
-
-			cvtColor(cam->preBgrImg, bgrImg, COLOR_BayerBG2BGR);
 
 			// kopiowanie do obrazka RGB
 			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
-			findBall(bgrImg, colorImg);
+			findBall(cam->grayImg, colorImg);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -246,6 +241,7 @@ void liveDataProcessing(void*)
 				}
 			}
 			reconstructMarkers3D();
+			reconstructBall3D();
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -489,13 +485,19 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	}
 }
 
-void findBall(Mat& bgrImg, Mat& colorImg) {
+void findBall(Mat& grayImg, Mat& colorImg) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
 	Scalar lowerBound(10, 230, 90);
 	Scalar upperBound(20, 255, 250);
-	Mat hsvImg, mask;
+	Mat hsvImg, bgrImg, mask;
 
+	// Konwersja obrazu szarego na kolorowy
+	cvtColor(grayImg, bgrImg, COLOR_BayerBG2BGR);
+
+	// Konwersja obrazu BGR na HSV
 	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
+
+	// Maskowanie zakresu koloru pomarañczowego
 	inRange(hsvImg, lowerBound, upperBound, mask);
 
 	vector<std::vector<cv::Point>> contours;
@@ -505,19 +507,81 @@ void findBall(Mat& bgrImg, Mat& colorImg) {
 	Point2f center;
 	float radius = 0;
 
+	// Przegl¹danie konturów w poszukiwaniu odpowiedniego obiektu
 	for (const auto& contour : contours) {
 		double area = cv::contourArea(contour);
-		if (area > 100) {
+		if (area > 100) {  // Sprawdzenie, czy kontur jest wystarczaj¹co du¿y
 			cv::minEnclosingCircle(contour, center, radius);
 			ballDetected = true;
 			break;
 		}
 	}
 
-		// Rysowanie rzeczywistej pozycji pi³eczki
-		circle(colorImg, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);
+	if (ballDetected) {
+		// Ustawienie flagi wykrycia pi³ki oraz zapisanie jej pozycji dla kamery 1
+		cam1.ballDetected = true;
+		cam1.ballCenter = center;
+
+		cam2.ballDetected = true;
+		cam2.ballCenter = center;
+	}
+	else {
+		cam1.ballDetected = false;
+		cam2.ballDetected = false;
+	}
+
+	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
+	if (ballDetected) {
+		circle(colorImg, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);// Rysowanie kó³ka
 		circle(colorImg, center, 3, cv::Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
 	}
+}
+
+
+void reconstructBall3D(void)
+{
+	uint8 i = 0, k = 0, li = 0;
+	float t0[3]{}, vx13[3]{}, g[3]{};
+	struct Det { float a, b, W; } det = { 0.0 };
+	struct Coords { float x, y, z; } pos = { 0.0 };
+	pPoint4 vr1 = NULL, vr3 = NULL, plBall = NULL, prBall = NULL;
+	algn(16) float  Rl[16] = { 0.0 }, Rr[16] = { 0.0 },
+		RAinvL[16] = { 0.0 }, RAinvR[16] = { 0.0 };
+
+	// Inicjalizacja macierzy rotacji kamer
+	for (i = 0; i < 9; ++i) {
+		Rl[ind9to16[i]] = cam1.RT[ind9to16[i]];
+		Rr[ind9to16[i]] = cam2.RT[ind9to16[i]];
+	}
+	Rl[15] = 1.0; Rr[15] = 1.0;
+
+	// Alokacja pamiêci dla pozycji pi³eczki na lewym i prawym obrazie
+	plBall = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
+	prBall = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
+
+	if (plBall != NULL && prBall != NULL) {
+		vr1 = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
+		vr3 = (pPoint4)_aligned_malloc(sizeof(Point4) * 1, 16);
+
+		// Sprawdzenie, czy pi³eczka jest wykryta na obu obrazach
+		if (cam1.ballDetected && cam2.ballDetected) {
+			m3d.isSet[0] = true;
+
+			// Przepisanie pozycji pi³eczki z buforów kamer
+			plBall[0].el.x = cam1.ballCenter.x;
+			plBall[0].el.y = cam1.ballCenter.y;
+			prBall[0].el.x = cam2.ballCenter.x;
+			prBall[0].el.y = cam2.ballCenter.y;
+
+			plBall[0].raw[2] = plBall[0].raw[3] = 1.0f; // Wartoœci potrzebne do obliczeñ
+			prBall[0].raw[2] = prBall[0].raw[3] = 1.0f;
+			li++;
+		}
+		else {
+			m3d.isSet[0] = false;
+		}
+	}
+}
 
 void cleanBorder(Mat& img) {
 	Scalar el;
@@ -631,11 +695,6 @@ static string toStringWithPrecision(double value, int precision) {
 static void pylonImageToCvMat(const void* pBuffer, int width, int height, Mat& image)
 {
 	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat z danych obrazu Pylon
-}
-
-static void pylonImageToCvBayerMat(const void* pBuffer, int width, int height, Mat& image)
-{
-	image = Mat(height, width, CV_8UC1, (uchar*)pBuffer); // tworzenie obiektu Mat Hsv Bayer rgb z danych obrazu Pylon
 }
 
 vector<Point2f> undistortPointsMG(pCamera cam, vector<Point2f> good_points_distorted)

@@ -223,7 +223,9 @@ typedef struct _Camera {
 	PYLON_WAITOBJECT_HANDLE	wait;
 	PYLON_STREAMBUFFER_HANDLE streamBuff[NUM_BUFFERS];
 	uint8 status, * grabBuff[NUM_BUFFERS], * buffer;
-	Mat Kc, Ac, grayImg, preBgrImg;
+	Mat Kc, Ac, grayImg;
+	bool ballDetected;
+	Point2f ballCenter;
 	uint64 s_exp_time, savedExp;
 	Marker coded_markers[56] = { 0 };
 	Marker coded_markers_buff[56] = { 0 };

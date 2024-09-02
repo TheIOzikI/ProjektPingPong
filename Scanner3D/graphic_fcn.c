@@ -6,7 +6,7 @@ LPDIRECT3DVERTEXBUFFER9 v_buffer = NULL;
 LPDIRECT3DINDEXBUFFER9 i_buffer = NULL;
 LPDIRECT3D9	d3d; // the pointer to our Direct3D interface
 LPD3DXMESH sphere_big, sphere_smallest, sphere_small, cam_lens, box_plate, box_cam,
-box_tool, box_body_bed, box_body_column, beam_p1, beam_p2, holder_1, holder_2;
+box_tool, box_body_bed, box_body_column, beam_p1, beam_p2, holder_1, holder_2, tennis_table, tennis_table_net;
 ID3DXMesh* Text_L = 0, * Text_R = 0;
 float camXat = 0.0f, camYat = 0.0f, camZat = 0.0f, scaleXYZ = 1.0f; // camera look at point
 
@@ -127,6 +127,8 @@ void cleanD3D(void)
 	holder_2->Release();
 	Text_L->Release();
 	Text_R->Release();
+	tennis_table->Release();
+	tennis_table_net->Release();
 }
 
 void initLight(void)
@@ -173,8 +175,8 @@ void createBlocks(void)
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 50.0, 50, 50, &cam_lens, NULL); // obiektyw kamery
 	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 100.0, 50, 50, &holder_1, NULL); // uchwyt narzędziowy
 	D3DXCreateCylinder(d3ddev, 25.0, 10.0, 60.0, 50, 50, &holder_2, NULL); // uchwyt narzędziowy
-	//D3DXCreateBox(d3ddev, 816.0, 1570.0, 813.0, &tennis_table, NULL); // stół pingpongowy
-	//D3DXCreateBox(d3ddev, 816.0, 1570.0, 813.0, &tennis_table_net, NULL); // siatka stół pingpongowy
+	D3DXCreateBox(d3ddev, 3000.0, 1500.0, 10, &tennis_table, NULL); // stół pingpongowy
+	D3DXCreateBox(d3ddev, 1.0, 1500.0, 15, &tennis_table_net, NULL); // siatka stół pingpongowy
 
 	HDC hdc = CreateCompatibleDC(0);
 	LOGFONT lf;
@@ -420,7 +422,8 @@ void dxRenderFrame(void)
 		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
 		//setColor(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
 		//cam_lens->DrawSubset(0);
-		box_plate->DrawSubset(0);
+		tennis_table->DrawSubset(0);
+		tennis_table_net->DrawSubset(0);
 
 		///////// ::: KAMERA PRAWA ::: ///////
 		D3DXMatrixScaling(&matScale, scaleXYZ_2, scaleXYZ_2, 0.2f); // podpis
