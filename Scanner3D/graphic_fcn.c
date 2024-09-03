@@ -12,7 +12,6 @@ float camXat = 0.0f, camYat = 0.0f, camZat = 0.0f, scaleXYZ = 1.0f; // camera lo
 
 extern Camera cam1, cam2;
 extern Marker3D m3d;
-extern Ball3D ball3D;
 extern double dT;
 extern LogicalVariables logicVariables;
 extern ApplicationWindows appWindows;
@@ -167,20 +166,11 @@ void createBlocks(void)
 	D3DXCreateSphere(d3ddev, 20, 100, 100, &sphere_big, NULL); // markery duże - sfery
 	D3DXCreateSphere(d3ddev, 10.0, 100, 100, &sphere_small, NULL); // markery małe - sfery
 	D3DXCreateSphere(d3ddev, 2.0, 100, 100, &sphere_smallest, NULL); // markery tablica kalibracyjna - sfery
-	D3DXCreateBox(d3ddev, 60.0, 10.0, 80.0, &box_plate, NULL); // płytka pod kamerę
-	D3DXCreateBox(d3ddev, 400.0, 25.0, 25.0, &beam_p1, NULL); // belka z inwaru p1
-	D3DXCreateBox(d3ddev, 100.0, 25.0, 40.0, &beam_p2, NULL); // belka z inwaru p2
 	D3DXCreateBox(d3ddev, 50.0, 50.0, 50.0, &box_cam, NULL); // kamera
-	D3DXCreateBox(d3ddev, 890.0, 420.0, 45.0, &box_tool, NULL); // stol obrabiarki
-	D3DXCreateBox(d3ddev, 816.0, 1570.0, 813.0, &box_body_bed, NULL); // loze obrabiarki
-	D3DXCreateBox(d3ddev, 400.0, 450.0, 1100.0, &box_body_column, NULL); // kolumna pionowa obrabiarki
-	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 50.0, 50, 50, &cam_lens, NULL); // obiektyw kamery
-	D3DXCreateCylinder(d3ddev, 25.0, 25.0, 100.0, 50, 50, &holder_1, NULL); // uchwyt narzędziowy
-	D3DXCreateCylinder(d3ddev, 25.0, 10.0, 60.0, 50, 50, &holder_2, NULL); // uchwyt narzędziowy
 	////////pingpong///////////////sprawdzić orentacje x-y
-	D3DXCreateBox(d3ddev, 274.0f, 152.5f, 2.0f, &tennis_table, NULL); // stół pingpongowy
-	D3DXCreateBox(d3ddev, 2.0f, 152.5f, 15.25f, &tennis_table_net, NULL); // siatka stół pingpongowy
-	D3DXCreateSphere(d3ddev, 2.0, 100, 100, &pingpong, NULL); // piłeczka pingpongowa 4cm srednicy
+	D3DXCreateBox(d3ddev, 1525.0f, 2740.0f, 2.0f, &tennis_table, NULL); // stół pingpongowy
+	D3DXCreateBox(d3ddev, 1525.0f, 20.0f, 152.5f, &tennis_table_net, NULL); // siatka stół pingpongowy
+	D3DXCreateSphere(d3ddev, 20.0f, 100, 100, &pingpong, NULL); // piłeczka pingpongowa 4cm srednicy
 	///////////////////////////////
 
 	HDC hdc = CreateCompatibleDC(0);
@@ -374,18 +364,18 @@ void dxRenderFrame(void)
 			for (int j = -ras; j <= ras; j += 100) {
 				line_vertices[0].x = float(i);
 				line_vertices[0].y = -float(ras);
-				line_vertices[0].z = -858.0 - 1.0;
+				line_vertices[0].z = -760.0 - 1.0;
 				line_vertices[1].x = float(i);
 				line_vertices[1].y = float(ras);
-				line_vertices[1].z = -858.0 - 1.0;
+				line_vertices[1].z = -760.0 - 1.0;
 				d3ddev->DrawPrimitiveUP(D3DPT_LINESTRIP, 1, line_vertices, sizeof(Point3f));
 
 				line_vertices[0].x = -float(ras);
 				line_vertices[0].y = float(j);
-				line_vertices[0].z = -858.0 - 1.0;
+				line_vertices[0].z = -760.0 - 1.0;
 				line_vertices[1].x = float(ras);
 				line_vertices[1].y = float(j);
-				line_vertices[1].z = -858.0 - 1.0;
+				line_vertices[1].z = -760.0 - 1.0;
 				d3ddev->DrawPrimitiveUP(D3DPT_LINESTRIP, 1, line_vertices, sizeof(Point3f));
 			}
 		}
@@ -404,31 +394,11 @@ void dxRenderFrame(void)
 		setColor(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
 		Text_L->DrawSubset(0);
 
-		//// płytka pod kamerę
-		//D3DXMatrixTranslation(&matTrans, 0.0, -30.0, -30.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam1.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.6f, 0.6f, 0.6f, 1.0f, 0.6f, 0.6f, 0.6f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//box_plate->DrawSubset(0);
-
-		//// kamera
-		//D3DXMatrixTranslation(&matTrans, 0.0, 0.0, -25.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam1.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.9f, 0.5f, 0.5f, 1.0f, 0.9f, 0.5f, 0.5f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//box_cam->DrawSubset(0);
-
-		//// obiektyw
-		//D3DXMatrixTranslation(&matTrans, 0, 0, 25.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam1.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//cam_lens->DrawSubset(0);
-		//tennis_table->DrawSubset(0);
-		//tennis_table_net->DrawSubset(0);
+		d3ddev->SetTransform(D3DTS_WORLD, &matWorldRT);
+		setColor(0.2f, 0.2f, 0.2f, 1.0f, 0.2f, 0.2f, 0.2f, 1.0f); // Diffuse RGBA, Ambient RGBA
+		tennis_table->DrawSubset(0);
+		setColor(0.2f, 0.2f, 0.2f, 1.0f, 0.2f, 0.2f, 0.2f, 1.0f); // Diffuse RGBA, Ambient RGBA
+		tennis_table_net->DrawSubset(0);
 
 		///////// ::: KAMERA PRAWA ::: ///////
 		D3DXMatrixScaling(&matScale, scaleXYZ_2, scaleXYZ_2, 0.2f); // podpis
@@ -444,33 +414,17 @@ void dxRenderFrame(void)
 		setColor(1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
 		Text_R->DrawSubset(0);
 
-		//// płytka pod kamerę
-		//D3DXMatrixTranslation(&matTrans, 0.0, -30.0, -30.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam2.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.6f, 0.6f, 0.6f, 1.0f, 0.6f, 0.6f, 0.6f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//box_plate->DrawSubset(0);
-
-		//// kamera
-		//D3DXMatrixTranslation(&matTrans, 0.0, 0.0, -25.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam2.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.9f, 0.5f, 0.5f, 1.0f, 0.9f, 0.5f, 0.5f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//box_cam->DrawSubset(0);
-
-		//// obiektyw
-		//D3DXMatrixTranslation(&matTrans, 0.0, 0.0, 25.0);
-		//D3DXMatrixMultiply(&temp, &matTrans, &cam2.rotation);
-		//D3DXMatrixMultiply(&temp, &temp, &matWorldRT);
-		//d3ddev->SetTransform(D3DTS_WORLD, &temp);
-		//setColor(0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
-		//cam_lens->DrawSubset(0);
-
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		/////////////////////////////// wydruk wszystkich znalezionych markerow //////////////////////////////////////
-		for (uint8 k = 0; k < 56; k++) {
+		if (m3d.isSet[0]) {
+			D3DXMatrixTranslation(&matTrans, m3d.x[0], m3d.y[0], m3d.z[0]);
+			D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+			d3ddev->SetTransform(D3DTS_WORLD, &temp);
+			setColor(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f); // Diffuse RGBA, Ambient RGBA
+			pingpong->DrawSubset(0);
+		}
+
+		for (uint8 k = 1; k < 56; k++) {
 			if (m3d.isSet[k]) {
 				D3DXMatrixTranslation(&matTrans, m3d.x[k], m3d.y[k], m3d.z[k]);
 				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
@@ -479,28 +433,6 @@ void dxRenderFrame(void)
 				sphere_small->DrawSubset(0);
 			}
 		}
-
-		/////////////////////////////////////////////////////////////////////////////////////////////////////////
-		///////////////////////piłeczka do pingponga///////////////////////////////////////////////////////////////
-		if (ball3D.isSet) {
-
-			// Create translation matrix from ball's 3D coordinates
-			D3DXMatrixTranslation(&matTrans, ball3D.x, ball3D.y, ball3D.z);
-
-			// Multiply with the world transformation matrix
-			D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
-
-			// Set the world transform to this matrix
-			d3ddev->SetTransform(D3DTS_WORLD, &temp);
-
-			// Set color for the ball (Diffuse RGBA, Ambient RGBA)
-			setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-
-			// Draw the ball using the small sphere mesh
-			pingpong->DrawSubset(0);
-		}
-
-	
 
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		////////////////////////////////////////// KONIEC RYSOWANIA BRYŁ //////////////////////////////////////////////

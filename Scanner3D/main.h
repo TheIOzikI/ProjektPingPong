@@ -56,8 +56,8 @@ typedef unsigned long long	uint64;
 #define H_PX				(CAM_HEIGHT/MIN_SCALE - 1U)   
 #define W_PX				(CAM_WIDTH/MIN_SCALE - 1U) 
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
-#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
-//#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
+//#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
+#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
@@ -169,7 +169,7 @@ struct ApplicationWindows {
 struct LogicalVariables {
 	uint8 view_rotation = 2, imdisp = 0; // zmienna wybierająca sposob wyswietlania obrazów
 	bool stop_exe = false, save_img_1 = false, save_img_2 = false,
-		auto_exp = false, mkr_color = true; // 0 (false) = czarny srodek  1 (true) = bialy srodek
+		auto_exp = false, mkr_color = false; // 0 (false) = czarny srodek  1 (true) = bialy srodek
 };
 
 // strukura dla markerow plaskich na obrazie
@@ -186,13 +186,6 @@ typedef struct _Marker3D {
 	uint8 code[56];
 	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
-
-// struktura przechowująca pozycję piłeczki po rekonstrukcji
-typedef struct _Ball3D {
-	bool isSet;        // Czy pozycja piłki została ustawiona
-	float x, y, z;     // Współrzędne 3D piłki
-	float err;         // Błąd rekonstrukcji
-} Ball3D;
 
 // struktura dla skanowanych punktow
 typedef union _Point4 {
@@ -230,7 +223,6 @@ typedef struct _Camera {
 	PYLON_STREAMBUFFER_HANDLE streamBuff[NUM_BUFFERS];
 	uint8 status, * grabBuff[NUM_BUFFERS], * buffer;
 	Mat Kc, Ac, grayImg;
-	bool ballDetected;
 	Point2f ballCenter;
 	uint64 s_exp_time, savedExp;
 	Marker coded_markers[56] = { 0 };

@@ -4,7 +4,6 @@
 #include "graphic_fcn.h"
 
 Marker3D m3d;
-Ball3D ball3D;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
@@ -88,7 +87,7 @@ void liveFeed(void* param)
 			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
-			findBall(cam->grayImg, colorImg);
+			findBall(cam->grayImg, colorImg, cam->coded_markers);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -242,7 +241,6 @@ void liveDataProcessing(void*)
 				}
 			}
 			reconstructMarkers3D();
-			reconstructBall3D();
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -486,7 +484,7 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	}
 }
 
-void findBall(Mat& grayImg, Mat& colorImg) {
+void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
 	Scalar lowerBound(10, 230, 90);
 	Scalar upperBound(20, 255, 250);
@@ -501,10 +499,11 @@ void findBall(Mat& grayImg, Mat& colorImg) {
 	// Maskowanie zakresu koloru pomarañczowego
 	inRange(hsvImg, lowerBound, upperBound, mask);
 
-	vector<std::vector<cv::Point>> contours;
+	vector<std::vector<Point>> contours;
 	findContours(mask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
 	bool ballDetected = false;
+	Point2f center;
 	float radius = 0;
 
 	// Przegl¹danie konturów w poszukiwaniu odpowiedniego obiektu
@@ -519,76 +518,16 @@ void findBall(Mat& grayImg, Mat& colorImg) {
 
 	if (ballDetected) {
 		// Ustawienie flagi wykrycia pi³ki oraz zapisanie jej pozycji dla kamery 1
-		cam1.ballDetected = true;
-		cam1.ballCenter = center;
-		
-		cam2.ballDetected = true;
-		cam2.ballCenter = center;
-	}
-	else {
-		cam1.ballDetected = false;
-		cam2.ballDetected = false;
+		coded_markers[0].isSet = true;
+		coded_markers[0].code = 0;
+		coded_markers[0].x = center.x;
+		coded_markers[0].y = center.y;
 	}
 
 	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
 	if (ballDetected) {
 		circle(colorImg, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);// Rysowanie kó³ka
 		circle(colorImg, center, 3, cv::Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
-	}
-}
-
-
-void reconstructBall3D(void)
-{
-	uint8 i = 0;
-	float x1, y1, x2, y2, z1, z2;
-	pPoint4 ball_pointsL = NULL, ball_pointsR = NULL;
-
-	// Alokacja pamiêci dla pozycji pi³ki na lewym i prawym obrazie
-	ball_pointsL = (pPoint4)_aligned_malloc(sizeof(Point4), 16);
-	ball_pointsR = (pPoint4)_aligned_malloc(sizeof(Point4), 16);
-
-	if (ball_pointsL != NULL && ball_pointsR != NULL) {
-		if (cam1.ballDetected && cam2.ballDetected) {
-			// Przypisanie pozycji pi³ki z obu kamer
-			ball_pointsL[0].el.x = (cam1.ballCenter.x - cam1.Kc.at<double>(0, 2)) / cam1.Kc.at<double>(0, 0);
-			ball_pointsL[0].el.y = (cam1.ballCenter.y - cam1.Kc.at<double>(1, 2)) / cam1.Kc.at<double>(1, 1);
-			ball_pointsL[0].el.z = 1.0;
-
-			ball_pointsR[0].el.x = (cam2.ballCenter.x - cam2.Kc.at<double>(0, 2)) / cam2.Kc.at<double>(0, 0);
-			ball_pointsR[0].el.y = (cam2.ballCenter.y - cam2.Kc.at<double>(1, 2)) / cam2.Kc.at<double>(1, 1);
-			ball_pointsR[0].el.z = 1.0;
-			odprintf("[Info] Koordynaty 2D	%f	%f	%f	%f\n", cam1.ballCenter.x, cam1.ballCenter.y, cam2.ballCenter.x, cam2.ballCenter.y);
-
-			// Obliczenia wspó³rzêdnych 3D pi³ki
-			x1 = ball_pointsL[0].el.x;
-			y1 = ball_pointsL[0].el.y;
-			z1 = ball_pointsL[0].el.z;
-			x2 = ball_pointsR[0].el.x;
-			y2 = ball_pointsR[0].el.y;
-			z2 = ball_pointsR[0].el.z;
-
-			// Triangulacja
-			float denom = cam1.RT[8] * x2 - cam2.RT[8] * x1 - cam1.RT[9] * y2 + cam2.RT[9] * y1;
-			float wx = (cam1.RT[3] * x2 - cam2.RT[3] * x1 + cam1.RT[11] * y2 - cam2.RT[11] * y1 + cam2.RT[3] - cam1.RT[3]) / denom;
-			float wy = (cam1.RT[7] * x2 - cam2.RT[7] * x1 + cam1.RT[10] * y2 - cam2.RT[10] * y1 + cam2.RT[7] - cam1.RT[7]) / denom;
-			float wz = (cam1.RT[11] * x2 - cam2.RT[11] * x1 + cam1.RT[12] * y2 - cam2.RT[12] * y1 + cam2.RT[11] - cam1.RT[11]) / denom;
-
-			// Ustawienie wspó³rzêdnych w strukturze Ball3D
-			ball3D.isSet = true;
-			ball3D.x = wx;
-			ball3D.y = wy;
-			ball3D.z = wz;
-			ball3D.err = 0.0f;
-			odprintf("[Info] Pozycja 3D pi³ki [%d]	%f	%f	%f	|%f\n", ball3D.isSet, ball3D.x, ball3D.y, ball3D.z, ball3D.err);
-		}
-		else {
-			ball3D.isSet = false;
-		}
-
-		// Zwolnienie pamiêci
-		_aligned_free(ball_pointsL);
-		_aligned_free(ball_pointsR);
 	}
 }
 
