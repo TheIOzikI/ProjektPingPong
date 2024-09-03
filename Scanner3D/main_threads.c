@@ -505,7 +505,6 @@ void findBall(Mat& grayImg, Mat& colorImg) {
 	findContours(mask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
 
 	bool ballDetected = false;
-	Point2f center;
 	float radius = 0;
 
 	// Przegl¹danie konturów w poszukiwaniu odpowiedniego obiektu
@@ -522,7 +521,7 @@ void findBall(Mat& grayImg, Mat& colorImg) {
 		// Ustawienie flagi wykrycia pi³ki oraz zapisanie jej pozycji dla kamery 1
 		cam1.ballDetected = true;
 		cam1.ballCenter = center;
-
+		
 		cam2.ballDetected = true;
 		cam2.ballCenter = center;
 	}
@@ -559,6 +558,7 @@ void reconstructBall3D(void)
 			ball_pointsR[0].el.x = (cam2.ballCenter.x - cam2.Kc.at<double>(0, 2)) / cam2.Kc.at<double>(0, 0);
 			ball_pointsR[0].el.y = (cam2.ballCenter.y - cam2.Kc.at<double>(1, 2)) / cam2.Kc.at<double>(1, 1);
 			ball_pointsR[0].el.z = 1.0;
+			odprintf("[Info] Koordynaty 2D	%f	%f	%f	%f\n", cam1.ballCenter.x, cam1.ballCenter.y, cam2.ballCenter.x, cam2.ballCenter.y);
 
 			// Obliczenia wspó³rzêdnych 3D pi³ki
 			x1 = ball_pointsL[0].el.x;
@@ -580,7 +580,7 @@ void reconstructBall3D(void)
 			ball3D.y = wy;
 			ball3D.z = wz;
 			ball3D.err = 0.0f;
-
+			odprintf("[Info] Pozycja 3D pi³ki [%d]	%f	%f	%f	|%f\n", ball3D.isSet, ball3D.x, ball3D.y, ball3D.z, ball3D.err);
 		}
 		else {
 			ball3D.isSet = false;
