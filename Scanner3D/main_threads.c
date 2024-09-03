@@ -241,7 +241,7 @@ void liveDataProcessing(void*)
 				}
 			}
 			reconstructMarkers3D();
-
+			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
 			cam2.mk_lock = false;

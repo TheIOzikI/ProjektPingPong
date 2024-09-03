@@ -167,7 +167,7 @@ void createBlocks(void)
 	D3DXCreateSphere(d3ddev, 10.0, 100, 100, &sphere_small, NULL); // markery małe - sfery
 	D3DXCreateSphere(d3ddev, 2.0, 100, 100, &sphere_smallest, NULL); // markery tablica kalibracyjna - sfery
 	D3DXCreateBox(d3ddev, 50.0, 50.0, 50.0, &box_cam, NULL); // kamera
-	////////pingpong///////////////sprawdzić orentacje x-y
+	////////pingpong///////////////
 	D3DXCreateBox(d3ddev, 1525.0f, 2740.0f, 2.0f, &tennis_table, NULL); // stół pingpongowy
 	D3DXCreateBox(d3ddev, 1525.0f, 20.0f, 152.5f, &tennis_table_net, NULL); // siatka stół pingpongowy
 	D3DXCreateSphere(d3ddev, 20.0f, 100, 100, &pingpong, NULL); // piłeczka pingpongowa 4cm srednicy
