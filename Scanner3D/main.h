@@ -188,7 +188,6 @@ typedef struct _Marker3D {
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
 // struktura przechowująca pozycję piłeczki po rekonstrukcji
-
 typedef struct _Ball3D {
 	bool isSet;        // Czy pozycja piłki została ustawiona
 	float x, y, z;     // Współrzędne 3D piłki
@@ -204,7 +203,6 @@ typedef union _Point4 {
 } Point4, far* lpPoint4, * pPoint4;
 
 // Struktura dla markerów xreferencyjnych z krzyża kalibracyjnego
-
 struct xRef {
 	unsigned long code;
 	float x, y, z;
