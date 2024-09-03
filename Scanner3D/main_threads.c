@@ -496,7 +496,7 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	// Konwersja obrazu BGR na HSV
 	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
 
-	// Maskowanie zakresu koloru pomarañczowego
+	// Maskowanie zakresu koloru pomarañczowego//
 	inRange(hsvImg, lowerBound, upperBound, mask);
 
 	vector<std::vector<Point>> contours;
