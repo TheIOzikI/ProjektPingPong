@@ -138,7 +138,7 @@ struct ApplicationWindows {
 		bool menu_item_enabled[14];
 	} NamedButtons = {
 		{ // inicjalizacja tablicy appWindows.menu_buttons.named_buttons.menu_item_names
-			L"---", L"---", L"---", L"---", L"---", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
+			L"Kalibracja par. zewnętrznych", L"---", L"---", L"---", L"---", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
 			L"Autoekspozycja", L"Typ obrazów",L"Zakończ pracę",  L"widok XY", L"widok YZ", L"widok XZ"
 		},
 		{ // inicjalizacja tablicy menu_item_enabled -> status przycisków (1 - aktywny, 0 - nieaktywny)
@@ -186,6 +186,11 @@ typedef struct _Marker3D {
 	uint8 code[56];
 	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
+
+// struktura dla śledzenia trajektorii
+struct trajectory {
+	float x, y, z;
+};
 
 // struktura dla skanowanych punktow
 typedef union _Point4 {

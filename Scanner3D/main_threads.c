@@ -83,11 +83,26 @@ void liveFeed(void* param)
 			// detekcja markerow (dziala tylko gdy kalibracja)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
-			// kopiowanie do obrazka RGB
-			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
-
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
 			findBall(cam->grayImg, colorImg, cam->coded_markers);
+
+			//undistort points
+			for (i = 0; i < 56; i++) {
+				if (cam->coded_markers[i].isSet) {
+					distorted_points[i].x = cam->coded_markers[i].x;
+					distorted_points[i].y = cam->coded_markers[i].y;
+				}
+			}
+			undistorted_points = undistortPointsMG(cam, distorted_points);
+			for (i = 0; i < 56; i++) {
+				if (cam->coded_markers[i].isSet) {
+					cam->coded_markers[i].x = undistorted_points[i].x;
+					cam->coded_markers[i].y = undistorted_points[i].y;
+				}
+			}
+
+			// kopiowanie do obrazka RGB
+			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
@@ -97,23 +112,17 @@ void liveFeed(void* param)
 				colorImg.setTo(Scalar(255, 0, 0), mask_high); // kolor niebieski
 			}
 
+			// do autoekspozycji (srednia jasnosc w kwadracie)
 			if (logicVariables.auto_exp) {
 				average_brightness = 0.0;
-				int count = 0; // To count actual samples considered
-				// Adjust step size to evenly distribute samples
-				int stepX = 1500 / 3;
-				int stepY = 1000 / 3;
-				for (int i = (CAM_WIDTH / 2) - 1500; i <= (CAM_WIDTH / 2) + 1500; i += stepX) {
-					for (int j = (CAM_HEIGHT / 2) - 1000; j <= (CAM_HEIGHT / 2) + 1000; j += stepY) {
+				for (int i = (CAM_WIDTH / 2) - 700; i <= (CAM_WIDTH / 2) + 700; i += 700) {
+					for (int j = (CAM_HEIGHT / 2) - 400; j <= (CAM_HEIGHT / 2) + 400; j += 400) {
 						average_brightness += cam->grayImg.at<uchar>(j, i);
 						circle(colorImg, Point(i, j), 30, Scalar(0, 255, 255), -1, 8, 0);
-						count++;
 					}
 				}
-				if (count > 0) { // Ensure we avoid division by zero
-					average_brightness /= count;
-				}
-				cam->br_max = (uint8_t)average_brightness; // Correct casting to uint8_t
+				average_brightness /= 9;
+				cam->br_max = (uint8)average_brightness; // dla regulatora w trzecim watku
 				rectangle(colorImg, Point(CAM_WIDTH - 250, 250), Point(CAM_WIDTH, 0), CV_RGB(255, 255, 0), 10, CV_AA, 0);
 				putText(colorImg, to_string(cam->br_max), Point(CAM_WIDTH - 250 + 25, 155), fontFace, fontScale, Scalar(0, 255, 255), 10);
 			}
@@ -486,21 +495,21 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 
 void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
-	Scalar lowerBound(10, 230, 90);
-	Scalar upperBound(20, 255, 250);
+	Scalar lowerBound(5, 180, 100);
+	Scalar upperBound(25, 255, 255);
 	Mat hsvImg, bgrImg, mask;
 
 	// Konwersja obrazu szarego na kolorowy
 	cvtColor(grayImg, bgrImg, COLOR_BayerBG2BGR);
 
 	// Konwersja obrazu BGR na HSV
-	cvtColor(bgrImg, hsvImg, cv::COLOR_BGR2HSV);
+	cvtColor(bgrImg, hsvImg, COLOR_BGR2HSV);
 
 	// Maskowanie zakresu koloru pomarañczowego//
 	inRange(hsvImg, lowerBound, upperBound, mask);
 
-	vector<std::vector<Point>> contours;
-	findContours(mask, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+	vector<vector<Point>> contours;
+	findContours(mask, contours, RETR_TREE, CHAIN_APPROX_SIMPLE);
 
 	bool ballDetected = false;
 	Point2f center;
@@ -508,9 +517,9 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 
 	// Przegl¹danie konturów w poszukiwaniu odpowiedniego obiektu
 	for (const auto& contour : contours) {
-		double area = cv::contourArea(contour);
+		double area = contourArea(contour);
 		if (area > 100) {  // Sprawdzenie, czy kontur jest wystarczaj¹co du¿y
-			cv::minEnclosingCircle(contour, center, radius);
+			minEnclosingCircle(contour, center, radius);
 			ballDetected = true;
 			break;
 		}
@@ -526,10 +535,18 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 
 	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
 	if (ballDetected) {
-		circle(colorImg, center, static_cast<int>(radius), cv::Scalar(0, 255, 0), 2);// Rysowanie kó³ka
-		circle(colorImg, center, 3, cv::Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
+		circle(colorImg, center, static_cast<int>(radius), Scalar(0, 255, 0), 2);// Rysowanie kó³ka
+		circle(colorImg, center, 3, Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
 	}
 }
+
+//void trajectoryBuffer(Maker* coded_markers) {
+//	if (m3d.isSet[0]) {
+//	
+//
+//
+//	}
+//}
 
 void cleanBorder(Mat& img) {
 	Scalar el;
@@ -796,14 +813,6 @@ void ExtrinsicParam(void* param)
 		// komunikat w oknie, ze za malo widocznych markerow na wzorcu
 		odprintf("[Info] Zbyt ma³o widocznych markerów: %d z 9!\n", found_mkr);
 	}
-	//cvReleaseMat(&A);
-	//cvReleaseMat(&K);
-	//cvReleaseMat(&rot);
-	//cvReleaseMat(&rotv);
-	//cvReleaseMat(&trans);
-	//cvReleaseMat(&mkref);
-	//cvReleaseMat(&mkimg);
-	//odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
 }
 
 void saveCamParams(pCamera cam, const char* name) {
