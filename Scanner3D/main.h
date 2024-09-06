@@ -56,8 +56,10 @@ typedef unsigned long long	uint64;
 #define H_PX				(CAM_HEIGHT/MIN_SCALE - 1U)   
 #define W_PX				(CAM_WIDTH/MIN_SCALE - 1U) 
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
+
+//////////zmienione na logicvariable guziki
 //#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
-#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
+//#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		

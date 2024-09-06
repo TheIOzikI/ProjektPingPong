@@ -271,7 +271,7 @@ void liveDataProcessing(void*)
 			li2 = 0;
 		}
 		end2 = clock();
-		loop = (uint)abs(DT - 1000.0 * (((double)end2 - (double)begin2) / CLOCKS_PER_SEC));
+		loop = (uint)abs(logicVariables.fps - 1000.0 * (((double)end2 - (double)begin2) / CLOCKS_PER_SEC));
 		// pozosta³y czas wolny
 		Sleep((DWORD)loop);
 		end1 = clock();
@@ -859,6 +859,7 @@ void ExtrinsicParam(void* param)
 	{
 		// komunikat w oknie, ze za malo widocznych markerow na wzorcu
 		odprintf("[Info] Zbyt ma³o widocznych markerów: %d z 9!\n", found_mkr);
+
 	}
 }
 

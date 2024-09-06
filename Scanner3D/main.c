@@ -69,7 +69,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 	cvInitFont(&font2, CV_FONT_HERSHEY_SIMPLEX, 6, 6, 0.0, 18, CV_AA);
 
 	appWindows.mainWindow = CreateWindowExW(0UL, wc.lpszClassName, L"PING PONG TRACKING",
-		WS_POPUP | WS_VISIBLE, 0, 0, 1920, 1080, nullptr, nullptr, hInstance, nullptr);
+	WS_OVERLAPPED | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU | WS_VISIBLE, 0, 0, 1920, 1080, nullptr, nullptr, hInstance, nullptr);
 	ShowWindow(appWindows.mainWindow, nCmdShow);
 	UpdateWindow(appWindows.mainWindow);
 
