@@ -18,12 +18,12 @@ void liveFeed(void* param)
 	PylonGrabResult_t result;
 	uint64 ctx;
 	uint8 i = 0, localstrm, fot_num_1 = 0, fot_num_2 = 0;
-	Mat mask_low, mask_high, colorImg, binImg, calibImg;
+	Mat mask_low, mask_high, binImg, calibImg;
 	vector<Point2f> distorted_points(56), undistorted_points(56);
 	bool isReady;
 	int fontFace = FONT_HERSHEY_DUPLEX;
 	float dTcam = 0.0, pix2 = 0.0, average_brightness = 0.0;
-	double fontScale = 3.0;
+	double fontScale = 1.5;
 
 	if (!cam->hdl) return;
 	if (cam->status) return;
@@ -58,6 +58,7 @@ void liveFeed(void* param)
 	cam->status = 2;
 	localstrm = cam->status;
 
+
 	odprintf("[Info] Starting Live Feed on %s\n", cam->id);
 	while (localstrm > 1 && !logicVariables.stop_exe)
 	{
@@ -84,32 +85,29 @@ void liveFeed(void* param)
 			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
-			findBall(cam->grayImg, colorImg, cam->coded_markers);
-
+			findBall(cam->grayImg, cam->colorImg, cam->coded_markers);
+			if(cam->cam_num == 1)odprintf("%f	%f\n", cam->coded_markers[0].x, cam->coded_markers[0].y);
+			
 			//undistort points
-			for (i = 0; i < 56; i++) {
-				if (cam->coded_markers[i].isSet) {
-					distorted_points[i].x = cam->coded_markers[i].x;
-					distorted_points[i].y = cam->coded_markers[i].y;
+				if (cam->coded_markers[0].isSet) {
+					distorted_points[0].x = cam->coded_markers[0].x;
+					distorted_points[0].y = cam->coded_markers[0].y;
 				}
-			}
 			undistorted_points = undistortPointsMG(cam, distorted_points);
-			for (i = 0; i < 56; i++) {
-				if (cam->coded_markers[i].isSet) {
-					cam->coded_markers[i].x = undistorted_points[i].x;
-					cam->coded_markers[i].y = undistorted_points[i].y;
+				if (cam->coded_markers[0].isSet) {
+					cam->coded_markers[0].x = undistorted_points[0].x;
+					cam->coded_markers[0].y = undistorted_points[0].y;
 				}
-			}
 
 			// kopiowanie do obrazka RGB
-			cvtColor(cam->grayImg, colorImg, COLOR_GRAY2BGR);
+			cvtColor(cam->grayImg, cam->colorImg, COLOR_GRAY2BGR);
 
 			// maski underexposure i overexposure
 			if (logicVariables.imdisp == 0) {
 				mask_low = cam->grayImg > 250;
 				mask_high = cam->grayImg < 5;
-				colorImg.setTo(Scalar(0, 0, 255), mask_low); // kolor czerwony
-				colorImg.setTo(Scalar(255, 0, 0), mask_high); // kolor niebieski
+				cam->colorImg.setTo(Scalar(0, 0, 255), mask_low); // kolor czerwony
+				cam->colorImg.setTo(Scalar(255, 0, 0), mask_high); // kolor niebieski
 			}
 
 			// do autoekspozycji (srednia jasnosc w kwadracie)
@@ -118,13 +116,13 @@ void liveFeed(void* param)
 				for (int i = (CAM_WIDTH / 2) - 700; i <= (CAM_WIDTH / 2) + 700; i += 700) {
 					for (int j = (CAM_HEIGHT / 2) - 400; j <= (CAM_HEIGHT / 2) + 400; j += 400) {
 						average_brightness += cam->grayImg.at<uchar>(j, i);
-						circle(colorImg, Point(i, j), 30, Scalar(0, 255, 255), -1, 8, 0);
+						circle(cam->colorImg, Point(i, j), 30, Scalar(0, 255, 255), -1, 8, 0);
 					}
 				}
 				average_brightness /= 9;
 				cam->br_max = (uint8)average_brightness; // dla regulatora w trzecim watku
-				rectangle(colorImg, Point(CAM_WIDTH - 250, 250), Point(CAM_WIDTH, 0), CV_RGB(255, 255, 0), 10, CV_AA, 0);
-				putText(colorImg, to_string(cam->br_max), Point(CAM_WIDTH - 250 + 25, 155), fontFace, fontScale, Scalar(0, 255, 255), 10);
+				rectangle(cam->colorImg, Point(CAM_WIDTH - 250, 250), Point(CAM_WIDTH, 0), CV_RGB(255, 255, 0), 10, CV_AA, 0);
+				putText(cam->colorImg, to_string(cam->br_max), Point(CAM_WIDTH - 250 + 25, 155), fontFace, fontScale, Scalar(0, 255, 255), 10);
 			}
 
 			if (!cam->mk_lock) { // gdy zapis odblokowany
@@ -144,16 +142,17 @@ void liveFeed(void* param)
 						LeaveCriticalSection(&cs2);
 					}
 				}
+				//if (cam->cam_num == 1 && cam->coded_markers[0].isSet) odprintf("%f	%f	|", cam->coded_markers[0].x, cam->coded_markers[0].y);
 			}
 
 			// wydruk wszystkich znalezionych markerow
 			for (i = 0; i < 56; i++) {
 				if (cam->coded_markers[i].isSet) {
-					circle(colorImg, Point((int)cam->coded_markers[i].x, (int)cam->coded_markers[i].y), 30, Scalar(0, 255, 0, 0), -1, 8, 0);
+					circle(cam->colorImg, Point((int)cam->coded_markers[i].x, (int)cam->coded_markers[i].y), 30, Scalar(0, 255, 0, 0));
 					if (cam->coded_markers[i].y < CAM_HEIGHT / 2)
-						putText(colorImg, to_string(cam->coded_markers[i].code), Point((int)cam->coded_markers[i].x + 40, (int)cam->coded_markers[i].y + 100), fontFace, fontScale, Scalar(0, 255, 255), 10);
+						putText(cam->colorImg, to_string(cam->coded_markers[i].code), Point((int)cam->coded_markers[i].x + 40, (int)cam->coded_markers[i].y + 100), fontFace, fontScale, Scalar(0, 255, 255), 2);
 					else
-						putText(colorImg, to_string(cam->coded_markers[i].code), Point((int)cam->coded_markers[i].x + 40, (int)cam->coded_markers[i].y - 100), fontFace, fontScale, Scalar(0, 255, 255), 10);
+						putText(cam->colorImg, to_string(cam->coded_markers[i].code), Point((int)cam->coded_markers[i].x + 40, (int)cam->coded_markers[i].y - 100), fontFace, fontScale, Scalar(0, 255, 255), 2);
 				}
 			}
 
@@ -171,21 +170,22 @@ void liveFeed(void* param)
 
 			// wydruk informacji w oknach kamer
 			if (cam->cam_num == 1) {
-				putText(colorImg, "CAM 1 - LEFT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
+				putText(cam->colorImg, "CAM 1 - LEFT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 
-				putText(colorImg, "exp s:", Point(40, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
-				putText(colorImg, to_string(cam->s_exp_time), Point(330, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, "exp s:", Point(40, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, to_string(cam->s_exp_time), Point(330, 150), fontFace, fontScale, Scalar(255, 255, 255), 2);
 
-				putText(colorImg, "fps:", Point(40, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
-				putText(colorImg, toStringWithPrecision(1 / dTcam, 1), Point(330, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, "fps:", Point(40, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, toStringWithPrecision(1 / dTcam, 1), Point(330, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
 
-				putText(colorImg, "auto exp:", Point(40, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
-				putText(colorImg, to_string(logicVariables.auto_exp), Point(500, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, "auto exp:", Point(40, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, to_string(logicVariables.auto_exp), Point(500, 1140), fontFace, fontScale, Scalar(255, 255, 255), 2);
+
 			}
 			else {
-				putText(colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
+				putText(cam->colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
 			}
-			imshow(cam->window, colorImg); // wyswietlenie obrazu
+			imshow(cam->window, cam->colorImg); // wyswietlenie obrazu
 		}
 		EnterCriticalSection(&cs);
 		localstrm = cam->status;
@@ -229,11 +229,13 @@ void liveDataProcessing(void*)
 	// set up and initialize Direct3D
 	dxInit(appWindows.panel3D);
 
+
 	while (!logicVariables.stop_exe) {
 		begin1 = clock();
 		begin2 = clock();
 		PylonDeviceExecuteCommandFeature(cam1.hdl, "TriggerSoftware");
 		PylonDeviceExecuteCommandFeature(cam2.hdl, "TriggerSoftware");
+
 
 		// rekonstrukcja markerów i inne funkcje bazujace na markerach
 		if (cam1.mk_lock && cam2.mk_lock) {
@@ -334,7 +336,7 @@ void reconstructMarkers3D(void)
 		vr3 = (pPoint4)_aligned_malloc(sizeof(Point4) * 56, 16);
 
 		// przepisanie pozycji tylko tych markerow (kodowanych), ktore sa jednoczesnie widoczne na obu obrazkach
-		for (k = 0; k < 56; k++) {
+		for (k = 0; k < 23; k++) {
 			if (cam1.coded_markers_buff[k].isSet && cam2.coded_markers_buff[k].isSet) {
 				m3d.isSet[k] = true;
 				//odprintf("1 [Bufor] kod[%d]	%f	%f\n", cam1.coded_markers_buff[k].code, cam1.coded_markers_buff[k].x, cam1.coded_markers_buff[k].y);
@@ -347,10 +349,13 @@ void reconstructMarkers3D(void)
 				plmk[k].raw[2] = plmk[k].raw[3] = 1.0f; // 1-ki potrzebne do obliczen
 				prmk[k].raw[2] = prmk[k].raw[3] = 1.0f;
 				li++;
+
 			}
 			else m3d.isSet[k] = false;
 		}
 	}
+
+	//if (cam1.coded_markers_buff[0].isSet) odprintf("%f	%f\n", plmk[0].el.x, plmk[0].el.y);
 
 	if (li > 0) {
 		//odprintf("znalazlem %d markerow\n", li);
@@ -370,7 +375,7 @@ void reconstructMarkers3D(void)
 		t0[1] = cam1.RT[7] - cam2.RT[7];
 		t0[2] = cam1.RT[11] - cam2.RT[11];
 
-		for (i = 0; i < 56; i++) {
+		for (i = 0; i < 23; i++) {
 			// cross product of vr1 and vr3
 			vx13[0] = vr1[i].el.y * vr3[i].el.z - vr3[i].el.y * vr1[i].el.z;
 			vx13[1] = vr3[i].el.x * vr1[i].el.z - vr3[i].el.z * vr1[i].el.x;
@@ -432,7 +437,7 @@ void reconstructMarkers3D(void)
 void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 disp, bool mkr_color)
 {
 	uint8 idxc = 0, idxu = 0, codeNum;
-	float ratio, x, y;
+	float ratio, x, y, ar = 0.0;
 
 	int th_area = 151, th_const = 9;
 	if (!mkr_color) adaptiveThreshold(img, bImg, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, th_area, th_const);
@@ -452,42 +457,50 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	vector<vector<Point>> contours;
 	vector<Point> cntr;
 
+
 	findContours(bImg, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_NONE, Point(0, 0));
 
 	vector<RotatedRect> eout(contours.size()), einn(contours.size());
 
 	for (size_t i = 0; i < contours.size(); ++i) {
+		ar = contourArea(contours[i]);
+		if (ar > 300.0 && ar < 1000.0)
+		{
+			if (hierarchy[i][2] != -1) {
+				cntr = contours[hierarchy[i][2]];
 
-		if (hierarchy[i][2] != -1) {
-			cntr = contours[hierarchy[i][2]];
+				if (contours[i].size() > 5 && cntr.size() > 5) {
+					eout[i] = fitEllipse(contours[i]);
+					einn[i] = fitEllipse(cntr);
 
-			if (contours[i].size() > 5 && cntr.size() > 5) {
-				eout[i] = fitEllipse(contours[i]);
-				einn[i] = fitEllipse(cntr);
+					x = einn[i].center.x - eout[i].center.x; // wzgledne przesuniecie srodkow koncenrtycznych okregow
+					y = einn[i].center.y - eout[i].center.y;
 
-				x = einn[i].center.x - eout[i].center.x; // wzgledne przesuniecie srodkow koncenrtycznych okregow
-				y = einn[i].center.y - eout[i].center.y;
-				if (sqrt(x * x + y * y) < MKR_PIX_ERR) {
-					ratio = ((einn[i].size.height / eout[i].size.height) +
-						(einn[i].size.width / eout[i].size.width)) / 2.0f;
-					if (ratio > MKR_MIN_RATIO && ratio < MKR_MAX_RATIO) { // dla naszych markerow idealnie jest 0,46 / po korekcji obrazu 0.55
+					if (sqrt(x * x + y * y) < MKR_PIX_ERR) {
+						ratio = ((einn[i].size.height / eout[i].size.height) +
+							(einn[i].size.width / eout[i].size.width)) / 2.0f;
+						if (ratio > MKR_MIN_RATIO && ratio < MKR_MAX_RATIO) { // dla naszych markerow idealnie jest 0,46 / po korekcji obrazu 0.55
 
-						codeNum = readCode(bImg, eout[i]);
+							codeNum = readCode(bImg, eout[i]);
+							//odprintf("contour size %f\n",  );
 
-						if (codeNum >= MIN_CODE && codeNum <= MAX_CODE) {
-							if (mode == 0) { // mode 0 - markery wpisywane w tablice zgodnie z numerem kodu
-								idxc = codeNum + 1;
+
+							if (codeNum >= MIN_CODE && codeNum <= MAX_CODE) {
+								if (mode == 0) { // mode 0 - markery wpisywane w tablice zgodnie z numerem kodu
+									idxc = codeNum + 1;
+								}
+								else if (mode == 1) idxc++; // mode 1 - wszytskie markery wpisywane w tablice po kolei (przy kalibracji)
+
+								coded_markers[idxc - 1].isSet = true;
+								coded_markers[idxc - 1].code = codeNum;
+								coded_markers[idxc - 1].x = eout[i].center.x;
+								coded_markers[idxc - 1].y = eout[i].center.y;
+								coded_markers[idxc - 1].elypse = eout[i];
 							}
-							else if (mode == 1) idxc++; // mode 1 - wszytskie markery wpisywane w tablice po kolei (przy kalibracji)
-
-							coded_markers[idxc - 1].isSet = true;
-							coded_markers[idxc - 1].code = codeNum;
-							coded_markers[idxc - 1].x = eout[i].center.x;
-							coded_markers[idxc - 1].y = eout[i].center.y;
-							coded_markers[idxc - 1].elypse = eout[i];
 						}
 					}
 				}
+
 			}
 		}
 	}
@@ -498,6 +511,7 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	Scalar lowerBound(5, 180, 100);
 	Scalar upperBound(25, 255, 255);
 	Mat hsvImg, bgrImg, mask;
+
 
 	// Konwersja obrazu szarego na kolorowy
 	cvtColor(grayImg, bgrImg, COLOR_BayerBG2BGR);
@@ -532,6 +546,7 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 		coded_markers[0].x = center.x;
 		coded_markers[0].y = center.y;
 	}
+	
 
 	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
 	if (ballDetected) {
@@ -539,14 +554,6 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 		circle(colorImg, center, 3, Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
 	}
 }
-
-//void trajectoryBuffer(Maker* coded_markers) {
-//	if (m3d.isSet[0]) {
-//	
-//
-//
-//	}
-//}
 
 void cleanBorder(Mat& img) {
 	Scalar el;
@@ -595,10 +602,10 @@ uint8_t readCode(Mat& img, RotatedRect ellipse) {
 	uint16_t k, l;
 	int32_t i, j, x, y;
 	float scale, rad, rmax, r, radius = ellipse.size.height / 2.0f;
-	Mat roi((int)(radius * 4.4f) + 2, (int)(radius * 4.4f) + 2, CV_8UC1);
+	Mat roi((int)(radius * CODE_AREA) + 2, (int)(radius * CODE_AREA) + 2, CV_8UC1);
 	Mat map = Mat::zeros(2, 3, CV_32FC1);
-	Point start((int)(ellipse.center.x - radius * 2.2), (int)(ellipse.center.y - radius * 2.2));
-	Point end = start + Point((int)(radius * 4.4f), (int)(radius * 4.4f));
+	Point start((int)(ellipse.center.x - radius * CODE_AREA / 2.0), (int)(ellipse.center.y - radius * CODE_AREA / 2.0));
+	Point end = start + Point((int)(radius * CODE_AREA), (int)(radius * CODE_AREA));
 	RotatedRect eli;
 	bool code[20];
 
@@ -635,6 +642,7 @@ uint8_t readCode(Mat& img, RotatedRect ellipse) {
 			if (y >= 0 && y < roi.rows && x >= 0 && x < roi.cols && roi.at<uint8_t>(y, x) > 0) {
 				code[cn] = true;
 				code[cn + 10] = true;
+				roi.at<uint8_t>(y, x) = 128;
 				break;
 			}
 		}
@@ -647,6 +655,9 @@ uint8_t readCode(Mat& img, RotatedRect ellipse) {
 	else {
 		readCode = 6;
 	}
+
+	//if (codesLUT[readCode] == 8) { imshow("test2", roi); waitKey(1); }
+
 
 	return codesLUT[readCode];
 }
@@ -721,8 +732,8 @@ void ExtrinsicParam(void* param)
 
 	// zliczenie markerow jednoczesnie widocznych na obrazie i nalezacych do referencja³u
 	for (i = 0; i < 54; i++) {
-		c = cam->coded_markers[i].code;
-		if (cam->coded_markers[i].isSet && RefPattern[c - 1].code > 0) {
+		c = cam->coded_markers_buff[i].code;
+		if (cam->coded_markers_buff[i].isSet && RefPattern[c - 1].code > 0) {
 			found_mkr++;
 		}
 	}
@@ -734,11 +745,11 @@ void ExtrinsicParam(void* param)
 
 		// przepisanie referencja³u i punktów obrazowych do cvmat-ów
 		for (i = 0; i < 54; i++) {
-			c = cam->coded_markers[i].code;
-			if (cam->coded_markers[i].isSet && RefPattern[c - 1].code > 0)
+			c = cam->coded_markers_buff[i].code;
+			if (cam->coded_markers_buff[i].isSet && RefPattern[c - 1].code > 0)
 			{
-				mkimg->data.fl[li * 2] = cam->coded_markers[i].x; //kolumna
-				mkimg->data.fl[li * 2 + 1] = cam->coded_markers[i].y; //wiersz
+				mkimg->data.fl[li * 2] = cam->coded_markers_buff[i].x; //kolumna
+				mkimg->data.fl[li * 2 + 1] = cam->coded_markers_buff[i].y; //wiersz
 				mkref->data.fl[li * 3] = RefPattern[c - 1].x;
 				mkref->data.fl[li * 3 + 1] = RefPattern[c - 1].y;
 				mkref->data.fl[li * 3 + 2] = RefPattern[c - 1].z;

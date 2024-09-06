@@ -137,6 +137,14 @@ bool initCameras(void)
 		errRes = PylonDeviceSetIntegerFeature(hCam2, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
 	}
 
+
+	isAvail = PylonDeviceFeatureIsWritable(hCam1, "MaxBufferSize");
+	isAvail &= PylonDeviceFeatureIsWritable(hCam2, "MaxBufferSize");
+	if (isAvail) {
+		errRes = PylonDeviceSetIntegerFeature(hCam1, "MaxBufferSize", 2304000);	pylonCheck(errRes);
+		errRes = PylonDeviceSetIntegerFeature(hCam2, "MaxBufferSize", 2304000);	pylonCheck(errRes);
+	}
+
 	////////////////// ustawienie rozdzielczoœci //////////////////
 	isAvail = PylonDeviceFeatureIsWritable(hCam1, "Width");
 	isAvail &= PylonDeviceFeatureIsWritable(hCam2, "Height");
@@ -404,11 +412,14 @@ void tryInitCameras(void* param)
 	// komunikacja z Arduino
 	InitCOMPort();
 
+
 	// watki nieskonczone
+
 	_beginthread(liveFeed, 0, (void*)&cam1); // cam L
 	_beginthread(liveFeed, 0, (void*)&cam2); // cam P
 	Sleep(200);
 	_beginthread(liveDataProcessing, 0, nullptr);
+
 }
 
 bool loadCamParams(int8* fileName, pCamera cam)

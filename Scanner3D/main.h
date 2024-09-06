@@ -68,8 +68,8 @@ typedef unsigned long long	uint64;
 
 // markers parameters
 #define TR_MARKER			15U
-#define BIN_THRESHOLD		30 // binarization threshold for markers // 60
-#define MKR_PIX_ERR		    5.0 // blad centrycznosci pol markera
+#define BIN_THRESHOLD		60 // binarization threshold for markers // 60
+#define MKR_PIX_ERR		    1.0 // blad centrycznosci pol markera
 #define MKR_MIN_RATIO       0.4 // stosunki srednic
 #define MKR_MAX_RATIO       0.7
 #define MKR_RECON_ERR		100.0 // duzy blad ustawiony!!!!!!!!
@@ -78,6 +78,7 @@ typedef unsigned long long	uint64;
 #define MAX_RECT_RATIO		1.0/0.7
 #define MIN_CODE			0
 #define MAX_CODE			56
+#define CODE_AREA			6
 
 // scanning parameters
 #define SAVE_MAPS_TO_FILE   0
@@ -187,11 +188,6 @@ typedef struct _Marker3D {
 	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
-// struktura dla śledzenia trajektorii
-struct trajectory {
-	float x, y, z;
-};
-
 // struktura dla skanowanych punktow
 typedef union _Point4 {
 	float raw[4];
@@ -227,7 +223,7 @@ typedef struct _Camera {
 	PYLON_WAITOBJECT_HANDLE	wait;
 	PYLON_STREAMBUFFER_HANDLE streamBuff[NUM_BUFFERS];
 	uint8 status, * grabBuff[NUM_BUFFERS], * buffer;
-	Mat Kc, Ac, grayImg;
+	Mat Kc, Ac, grayImg, colorImg;
 	Point2f ballCenter;
 	uint64 s_exp_time, savedExp;
 	Marker coded_markers[56] = { 0 };

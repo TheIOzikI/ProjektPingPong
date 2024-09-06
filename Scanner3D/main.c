@@ -190,6 +190,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 			// przycisk nr 1! - 
 		case MNU_EMPTY_1:
 			ExtrinsicParam(&cam1);
+			Sleep(100);
 			ExtrinsicParam(&cam2);
 			break;
 

@@ -10,7 +10,6 @@ void liveFeedRestore(void*);
 void setExposure(uint64, int = 0);
 void reconstructMarkers3D(void);
 void findMarkers(Mat&, Mat&, Marker*, uint8, uint8, bool);
-//void trajectoryBuffer(Marker*);
 void findBall(Mat& ,Mat&, Marker*);
 void cleanBorder(Mat&);
 float alignRadians(Mat&, float, Point2f);
