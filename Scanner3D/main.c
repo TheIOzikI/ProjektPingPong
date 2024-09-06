@@ -187,31 +187,46 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
 
-			// przycisk nr 1! - 
+			// przycisk nr 1! - Kalibracja par. zewnętrznych
 		case MNU_EMPTY_1:
 			ExtrinsicParam(&cam1);
 			Sleep(100);
 			ExtrinsicParam(&cam2);
 			break;
 
-			// przycisk nr 2! - 
+			// przycisk nr 2! - Typ predykcji
 		case MNU_EMPTY_2:
-
+			logicVariables.prediction++;
+			if (logicVariables.prediction > 1) logicVariables.imdisp = 0;
 			break;
 
-			// przycisk nr 3! - 
+			// przycisk nr 3! - Rysowanie trajektorii
 		case MNU_EMPTY_3:
-
+			logicVariables.trajectory = !logicVariables.trajectory;
 			break;
 
-			// przycisk nr 4! - 
+			// przycisk nr 4! - -5FPS
 		case MNU_EMPTY_4:
-
+			if (logicVariables.fps > 10) {
+				logicVariables.fps = logicVariables.fps - 5;
+			}
+			else
+			{
+				logicVariables.fps = 5;
+			}
+			odprintf("[Info] FPS	%u\n", logicVariables.fps);
 			break;
 
-			// przycisk nr 5! - 
+			// przycisk nr 5! - +5FPS
 		case MNU_EMPTY_5:
-
+			if (logicVariables.fps < 60) {
+				logicVariables.fps = logicVariables.fps + 5;
+			}
+			else
+			{
+				logicVariables.fps = 60;
+			}
+			odprintf("[Info] FPS	%u\n", logicVariables.fps);
 			break;
 
 			// przycisk nr 6! - zapis zdjęcia L

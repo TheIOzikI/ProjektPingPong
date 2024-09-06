@@ -129,21 +129,17 @@ bool initCameras(void)
 		pylonCheck(errRes);
 		odprintf("[Info] Using camera no. 2: '%s'\n", buf);
 	}
-	//// Set packet size to max supported by jumbo frames (9000) if available
-	isAvail = PylonDeviceFeatureIsWritable(hCam1, "GevSCPSPacketSize");
-	isAvail &= PylonDeviceFeatureIsWritable(hCam2, "GevSCPSPacketSize");
-	if (isAvail) {
-		errRes = PylonDeviceSetIntegerFeature(hCam1, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
-		errRes = PylonDeviceSetIntegerFeature(hCam2, "GevSCPSPacketSize", 1500);	pylonCheck(errRes);
-	}
-
 
 	isAvail = PylonDeviceFeatureIsWritable(hCam1, "MaxBufferSize");
 	isAvail &= PylonDeviceFeatureIsWritable(hCam2, "MaxBufferSize");
 	if (isAvail) {
-		errRes = PylonDeviceSetIntegerFeature(hCam1, "MaxBufferSize", 2304000);	pylonCheck(errRes);
-		errRes = PylonDeviceSetIntegerFeature(hCam2, "MaxBufferSize", 2304000);	pylonCheck(errRes);
+		errRes = PylonDeviceSetIntegerFeature(hCam1, "MaxBufferSize", 11520000);	pylonCheck(errRes);
+		errRes = PylonDeviceSetIntegerFeature(hCam2, "MaxBufferSize", 11520000);	pylonCheck(errRes);
 	}
+	
+	errRes = PylonDeviceFeatureFromString(hCam1, "PixelFormat", "BayerRG8");		pylonCheck(errRes);
+	errRes = PylonDeviceFeatureFromString(hCam2, "PixelFormat", "BayerRG8");		pylonCheck(errRes);
+
 
 	////////////////// ustawienie rozdzielczoœci //////////////////
 	isAvail = PylonDeviceFeatureIsWritable(hCam1, "Width");
@@ -211,32 +207,6 @@ bool initCameras(void)
 	errRes = PylonDeviceFeatureFromString(hCam2, "TriggerSource", "Software");
 
 	return true;
-}
-
-void InitCOMPort(void)
-{
-	DCB serialParams = { 0 };
-	COMMTIMEOUTS timeout = { 0 };
-	char ComName[] = "COM3";
-
-	serialHandle = CreateFileA(ComName, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0); // open serial port
-
-	if (!GetCommState(serialHandle, &serialParams)) odprintf("\n[Info] Nie polaczono z portem %s\n", ComName);
-	else odprintf("[Info] Polaczono z portem %s\n", ComName);
-
-	serialParams.BaudRate = 19200;
-	serialParams.ByteSize = 8;
-	serialParams.StopBits = ONESTOPBIT;
-	serialParams.Parity = NOPARITY;
-	if (!SetCommState(serialHandle, &serialParams)) odprintf("[Info] Blad konfiguracji portu %s\n", ComName);
-	else odprintf("[Info] Skonfigurowano port %s\n", ComName);
-
-	GetCommState(serialHandle, &serialParams); // pobranie aktualnych
-	odprintf("serialParams: \nBaudRate -> %d\nByteSize -> %d\nStopBits -> %d\nParity -> %d",
-		serialParams.BaudRate, serialParams.ByteSize, serialParams.StopBits, serialParams.Parity);
-
-	if (!SetCommTimeouts(serialHandle, &timeout)) odprintf("[Info] Blad konfiguracji timeoutow portu %s\n", ComName);
-	else odprintf("[Info] Skonfigurowano timeouty portu %s\n", ComName);  // set timeouts
 }
 
 void tryInitCameras(void* param)
@@ -408,10 +378,6 @@ void tryInitCameras(void* param)
 	refresh3Dobjects(&cam2);
 
 	odprintf("\n[INFO] Wczytano stare parametry kamer z plikow\n");
-
-	// komunikacja z Arduino
-	InitCOMPort();
-
 
 	// watki nieskonczone
 

@@ -7,7 +7,6 @@
 __inline void errMsg(wchar_t*, wchar_t*);
 void terminateCameras(HRESULT);
 bool initCameras(void);
-void InitCOMPort(void);
 void tryInitCameras(void*);
 bool loadCamParams(int8*, pCamera);
 

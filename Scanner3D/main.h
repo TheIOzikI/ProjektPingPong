@@ -80,26 +80,6 @@ typedef unsigned long long	uint64;
 #define MAX_CODE			56
 #define CODE_AREA			6
 
-// scanning parameters
-#define SAVE_MAPS_TO_FILE   0
-#define NUM_CLOUDS			6
-#define PTS_PRINT_STEP_DEF	5
-#define CAM_EXP_THRESHOLD	20U // threshold używany przy liczeniu mapy fazy (możemy inaczej nazwać)
-
-// 2nd screen parameters (projektor)
-#define PROJ_WIDTH			1920 //1920
-#define PROJ_HEIGHT			1080 //1080
-#define PROJ_WIDTH2			PROJ_WIDTH/2
-#define PROJ_HEIGHT2		PROJ_HEIGHT/2
-#define PROJ_POS_X			0
-#define PROJ_POS_Y			0
-#define PROJ_COLOR_LO		cvScalar(0,0,0,0) // BGRA 0-255
-#define PROJ_COLOR_HI		cvScalar(255,255,255,0)
-#define PROJ_COLOR_G		cvScalar(255,255,0,0)
-#define PROJ_COLOR_BL       cvScalar(0,255,255,255)
-#define PROJ_SLEEP			150
-#define GCODE_LVL			7U
-
 // windows parameters
 #define CAM_WINDOW_HEIGHT	450U
 #define CAM_WINDOW_WIDTH	(uint32)((float)CAM_WIDTH/((float)CAM_HEIGHT/(float)CAM_WINDOW_HEIGHT))
@@ -139,7 +119,7 @@ struct ApplicationWindows {
 		bool menu_item_enabled[14];
 	} NamedButtons = {
 		{ // inicjalizacja tablicy appWindows.menu_buttons.named_buttons.menu_item_names
-			L"Kalibracja par. zewnętrznych", L"---", L"---", L"---", L"---", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
+			L"Kalibracja par. zewnętrznych", L"Typ predykcji", L"Rysowanie trajektorii", L"-5 FPS", L"+5 FPS", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
 			L"Autoekspozycja", L"Typ obrazów",L"Zakończ pracę",  L"widok XY", L"widok YZ", L"widok XZ"
 		},
 		{ // inicjalizacja tablicy menu_item_enabled -> status przycisków (1 - aktywny, 0 - nieaktywny)
@@ -168,9 +148,11 @@ struct ApplicationWindows {
 };
 
 struct LogicalVariables {
-	uint8 view_rotation = 2, imdisp = 0; // zmienna wybierająca sposob wyswietlania obrazów
+	uint8 view_rotation = 2, imdisp = 0, // zmienna wybierająca sposob wyswietlania obrazów
+		fps = 40, prediction = 0; // zmiana fps, przełączanie typu predykcji
 	bool stop_exe = false, save_img_1 = false, save_img_2 = false,
-		auto_exp = false, mkr_color = false; // 0 (false) = czarny srodek  1 (true) = bialy srodek
+		auto_exp = false, mkr_color = false, // 0 (false) = czarny srodek  1 (true) = bialy srodek
+		trajectory = true; // wyświetlanie trajektorii
 };
 
 // strukura dla markerow plaskich na obrazie
@@ -188,7 +170,7 @@ typedef struct _Marker3D {
 	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
-// struktura dla skanowanych punktow
+// struktura dla rekonstrukcji markerów
 typedef union _Point4 {
 	float raw[4];
 	struct {
@@ -196,15 +178,18 @@ typedef union _Point4 {
 	} el;
 } Point4, far* lpPoint4, * pPoint4;
 
+//struktura dla przechowywania punktów trajektorii piłki
+struct prevPoints3D {
+	vector<float> x;
+	vector<float> y;
+	vector<float> z;
+	int cycles;
+};
+
 // Struktura dla markerów xreferencyjnych z krzyża kalibracyjnego
 struct xRef {
 	unsigned long code;
 	float x, y, z;
-};
-
-// struktura dla osi skanera
-struct ThreePoints3f {
-	Point3f p1, p2, p3;
 };
 
 // struktura kamery

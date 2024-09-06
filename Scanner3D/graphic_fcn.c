@@ -5,13 +5,13 @@ LPDIRECT3DDEVICE9 d3ddev; // the pointer to the device class
 LPDIRECT3DVERTEXBUFFER9 v_buffer = NULL;
 LPDIRECT3DINDEXBUFFER9 i_buffer = NULL;
 LPDIRECT3D9	d3d; // the pointer to our Direct3D interface
-LPD3DXMESH sphere_big, sphere_smallest, sphere_small, cam_lens, box_plate, box_cam,
-box_tool, box_body_bed, box_body_column, beam_p1, beam_p2, holder_1, holder_2, tennis_table, tennis_table_net, pingpong;
+LPD3DXMESH sphere_big, sphere_smallest, sphere_small, box_cam, tennis_table, tennis_table_net, pingpong;
 ID3DXMesh* Text_L = 0, * Text_R = 0;
 float camXat = 0.0f, camYat = 0.0f, camZat = 0.0f, scaleXYZ = 1.0f; // camera look at point
 
 extern Camera cam1, cam2;
 extern Marker3D m3d;
+extern prevPoints3D prev_points;
 extern double dT;
 extern LogicalVariables logicVariables;
 extern ApplicationWindows appWindows;
@@ -115,21 +115,12 @@ void cleanD3D(void)
 	sphere_big->Release();
 	sphere_small->Release();
 	sphere_smallest->Release();
-	box_plate->Release();
-	beam_p1->Release();
-	beam_p2->Release();
 	box_cam->Release();
-	box_tool->Release();
-	box_body_bed->Release();
-	box_body_column->Release();
-	cam_lens->Release();
-	holder_1->Release();
-	holder_2->Release();
-	Text_L->Release();
-	Text_R->Release();
 	tennis_table->Release();
 	tennis_table_net->Release();
 	pingpong->Release();
+	Text_L->Release();
+	Text_R->Release();
 }
 
 void initLight(void)
@@ -399,6 +390,7 @@ void dxRenderFrame(void)
 		tennis_table->DrawSubset(0);
 		setColor(0.2f, 0.2f, 0.2f, 1.0f, 0.2f, 0.2f, 0.2f, 1.0f); // Diffuse RGBA, Ambient RGBA
 		tennis_table_net->DrawSubset(0);
+
 
 		///////// ::: KAMERA PRAWA ::: ///////
 		D3DXMatrixScaling(&matScale, scaleXYZ_2, scaleXYZ_2, 0.2f); // podpis

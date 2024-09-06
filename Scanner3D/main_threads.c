@@ -4,6 +4,7 @@
 #include "graphic_fcn.h"
 
 Marker3D m3d;
+prevPoints3D prev_points;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
@@ -252,6 +253,7 @@ void liveDataProcessing(void*)
 				}
 			}
 			reconstructMarkers3D();
+			listBall3dPositions(m3d);
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -546,12 +548,42 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 		coded_markers[0].x = center.x;
 		coded_markers[0].y = center.y;
 	}
+	else
+	{
+		coded_markers[0].isSet = false;
+	}
 	
 
 	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
 	if (ballDetected) {
 		circle(colorImg, center, static_cast<int>(radius), Scalar(0, 255, 0), 2);// Rysowanie kó³ka
 		circle(colorImg, center, 3, Scalar(0, 0, 255), -1); // Rysowanie punktu centralnego
+	}
+}
+
+void listBall3dPositions(Marker3D m3d) {
+	if (m3d.isSet[0] == true) {
+		// przepisanie punktów do odpowiednich wektorów
+		prev_points.x.push_back(m3d.x[0]);
+		prev_points.y.push_back(m3d.y[0]);
+		prev_points.z.push_back(m3d.z[0]);
+	}
+	else
+	{
+		prev_points.cycles++;
+		odprintf("[Info] Ball not seen\n");
+	}
+	//kasowanie trajektorii po 3 sekundach bez widocznej pi³ki 
+	if(prev_points.cycles >= 3 * dT) {
+		// wyczyszczenie wszystkich wektorów
+		prev_points.x.clear();
+		prev_points.y.clear();
+		prev_points.z.clear();
+		prev_points.x.shrink_to_fit();
+		prev_points.y.shrink_to_fit();
+		prev_points.z.shrink_to_fit();
+		prev_points.cycles = 0;
+		odprintf("[Info] Trajectory points reset\n");
 	}
 }
 
@@ -731,7 +763,7 @@ void ExtrinsicParam(void* param)
 	//FindMarkers(cam->grayImg, binImg, tImg, M, MU, 15, 27, 1, &br_max, 0, mkr_color); // mode = 1 -> marekry wszytskie, nawet powtarzajace sie, kolejno do struktury
 
 	// zliczenie markerow jednoczesnie widocznych na obrazie i nalezacych do referencja³u
-	for (i = 0; i < 54; i++) {
+	for (i = 1; i < 54; i++) {
 		c = cam->coded_markers_buff[i].code;
 		if (cam->coded_markers_buff[i].isSet && RefPattern[c - 1].code > 0) {
 			found_mkr++;
@@ -817,6 +849,10 @@ void ExtrinsicParam(void* param)
 		cvReleaseMat(&trans);
 		cvReleaseMat(&mkref);
 		cvReleaseMat(&mkimg);
+
+		//odœwie¿enie kamer w oknie directx 
+		refresh3Dobjects(&cam1);
+		refresh3Dobjects(&cam2);
 		odprintf("[Info] Zakoñczono kalibracjê parametrów zewnêtrznych!\n");
 	}
 	else
