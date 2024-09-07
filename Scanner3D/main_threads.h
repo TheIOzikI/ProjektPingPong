@@ -12,6 +12,7 @@ void reconstructMarkers3D(void);
 void findMarkers(Mat&, Mat&, Marker*, uint8, uint8, bool);
 void findBall(Mat& ,Mat&, Marker*);
 void listBall3dPositions(Marker3D m3d);
+void kalmanPrediction(prevPoints3D);
 void cleanBorder(Mat&);
 float alignRadians(Mat&, float, Point2f);
 uint8_t readCode(Mat&, RotatedRect);

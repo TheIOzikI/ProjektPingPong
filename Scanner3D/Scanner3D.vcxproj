@@ -137,6 +137,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -154,6 +155,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <OpenMPSupport>true</OpenMPSupport>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -172,6 +174,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -193,8 +196,7 @@
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <OpenMPSupport>true</OpenMPSupport>
       <CompileAs>CompileAsCpp</CompileAs>
-      <AdditionalIncludeDirectories>
-      </AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BrowseInformation>true</BrowseInformation>
       <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
@@ -214,11 +216,13 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='HDD|Win32'">
     <ClCompile>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='HDD|x64'">
     <ClCompile>
       <LanguageStandard>Default</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

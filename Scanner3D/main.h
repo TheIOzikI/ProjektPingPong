@@ -14,9 +14,13 @@
 #include <commctrl.h> // wykorzystane do trackbara
 #include <crtdefs.h>
 #include <process.h>
+#include <Eigen/Dense>
+#include <vector>
+#include <cmath>
 
 using namespace cv;
 using namespace std;
+using namespace Eigen;
 
 #define null				((void *)0)
 #define true				1

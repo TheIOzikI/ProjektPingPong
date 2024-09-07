@@ -3,6 +3,10 @@
 #include "main.h"
 #include <emmintrin.h>
 #include <windows.h>
+#include <iostream>
+#include <Eigen/Dense>
+#include <vector>
+#include <cmath>
 
 constexpr float pi = 3.141592653589793f;
 constexpr float pi_div3 = 1.047197551196598f;

@@ -3,6 +3,9 @@
 #include "print_fcn.h"
 #include "graphic_fcn.h"
 
+MatrixXd prevPointsIn3f;
+vector<MatrixXd> estimated_states;
+vector<vector<MatrixXd>> predicted_states;
 Marker3D m3d;
 prevPoints3D prev_points;
 extern Camera cam1, cam2;
@@ -254,6 +257,14 @@ void liveDataProcessing(void*)
 			}
 			reconstructMarkers3D();
 			listBall3dPositions(m3d);
+			if(logicVariables.prediction == 1){
+				//kalman
+				kalmanPrediction(prev_points);
+			}
+			if (logicVariables.prediction == 2){
+				//jakis inny algorytm predykcji
+
+			}
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -584,6 +595,91 @@ void listBall3dPositions(Marker3D m3d) {
 		prev_points.z.shrink_to_fit();
 		prev_points.cycles = 0;
 		odprintf("[Info] Trajectory points reset\n");
+	}
+}
+
+MatrixXd convertToMatrix(const prevPoints3D& points) {
+	size_t n = points.x.size();
+	MatrixXd prevPointsIn3f(n, 3);
+
+	for (size_t i = 0; i < n; ++i) {
+		prevPointsIn3f(i, 0) = points.x[i];
+		prevPointsIn3f(i, 1) = points.y[i];
+		prevPointsIn3f(i, 2) = points.z[i];
+	}
+
+	return prevPointsIn3f;
+}
+
+MatrixXd kalman_gain(const MatrixXd& P, const MatrixXd& H, const MatrixXd& R) {
+	return P * H.transpose() * (H * P * H.transpose() + R).inverse();
+}
+
+void initializeStates(int n, int n_future) {
+	// Inicjalizacja globalnych zmiennych
+	estimated_states.resize(n, VectorXd::Zero(9));
+	predicted_states.resize(n, vector<MatrixXd>(n_future, VectorXd::Zero(9)));
+}
+
+void kalmanPrediction(prevPoints3D prev_points) {
+	double bounce_damping_factor = 0.8;  // wspó³czynnik t³umienia odbicia
+	double g = 9.8;  // przyspieszenie grawitacyjne
+
+	MatrixXd A(9, 9);  // macierz przejœcia stanu
+	// Wype³nienie macierzy A...
+	MatrixXd B(9, 1);  // macierz sterowania z grawitacj¹
+	// Wype³nienie macierzy B...
+	MatrixXd H(3, 9);  // macierz pomiarowa
+	// Wype³nienie macierzy H...
+	MatrixXd R = 0.000000000002 * MatrixXd::Identity(3, 3); // szum pomiaru
+	MatrixXd Q = 0.000001 * MatrixXd::Identity(9, 9);       // szum procesu
+	MatrixXd P = MatrixXd::Identity(9, 9);  // macierz b³êdu
+
+	VectorXd x = VectorXd::Zero(9);  // pocz¹tkowa pozycja
+
+	double predictiontime = 3;  // czas predykcji do przodu (w sekundach)
+	int n = prevPointsIn3f.rows();  // liczba pomiarów
+	int n_future = round(dT * predictiontime);  // liczba kroków do przodu
+
+	// Inicjalizacja globalnych zmiennych
+	initializeStates(n, n_future);
+
+	for (int k = 0; k < n; ++k) {
+		// Krok predykcji
+		x = A * x + B;
+		P = A * P * A.transpose() + Q;
+
+		// Aktualizacja filtra Kalmana
+		VectorXd z = prevPointsIn3f.row(k).transpose();
+		MatrixXd K = kalman_gain(P, H, R);  // Obliczanie zysku Kalmana
+		x = x + K * (z - H * x);
+
+		// Wykrycie odbicia (jeœli pozycja z <= 0)
+		if (x(2) <= 0) {
+			x(2) = 0;
+			x(5) = -x(5) * bounce_damping_factor;
+		}
+
+		// Aktualizacja macierzy b³êdu
+		P = (MatrixXd::Identity(9, 9) - K * H) * P;
+
+		// Przechowywanie oszacowanego stanu
+		estimated_states[k] = x;
+
+		// Predykcja przysz³ych stanów
+		VectorXd x_future = x;
+		for (int j = 0; j < n_future; ++j) {
+			x_future = A * x_future;
+
+			// Wykrycie odbicia dla przewidywanych stanów
+			if (x_future(2) <= 0) {
+				x_future(2) = 0;
+				x_future(5) = -x_future(5) * bounce_damping_factor;
+			}
+
+			// Przechowywanie przewidywanego stanu
+			predicted_states[k][j] = x_future;
+		}
 	}
 }
 
