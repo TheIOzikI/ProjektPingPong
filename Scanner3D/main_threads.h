@@ -13,7 +13,7 @@ void findMarkers(Mat&, Mat&, Marker*, uint8, uint8, bool);
 void findBall(Mat& ,Mat&, Marker*);
 void listBall3dPositions(Marker3D m3d);
 void kalmanPrediction(prevPoints3D);
-void polyfitPreciction(vector<float>& x, vector<float>& y, vector<float>& z);
+void polyfitPrediction(vector<float>& x, vector<float>& y, vector<float>& z);
 void newtonPrediction(vector<float>& x, vector<float>& y, vector<float>& z);
 void optimalStrikePointKalman(vector<vector<float>>& x,vector<vector<float>>& y,vector<vector<float>>& z,int a, int b, float c, float d);
 void optimalStrikePointOther(vector<float>& x, vector<float>& y, vector<float>& z, float a);

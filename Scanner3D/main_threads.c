@@ -272,19 +272,24 @@ void liveDataProcessing(void*)
 				int n = prevPointsIn3f.rows();  // liczba pomiarów
 				int n_future = round(dT * predictiontime);  // liczba kroków do przodu
 				optimalStrikePointKalman(predicted_point.x, predicted_point.y, predicted_point.z, n, n_future, 1500.0f, 100.0f);
+				odprintf("[Prediction Type] Kalman\n");
 				}
 			if (logicVariables.prediction == 2){
 				//Aproksymacja wielomianowa
 				polyfitPrediction(prev_points.x, prev_points.y, prev_points.z);
 				optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
+				odprintf("[Prediction Type] Polyfit\n");
 			}
 			if (logicVariables.prediction == 3) {
 				//Równania ruchu
 				newtonPrediction(prev_points.x, prev_points.y, prev_points.z);
 				optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
+				odprintf("[Prediction Type] Newton\n");
 			}
 
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
+			odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
 			cam2.mk_lock = false;
