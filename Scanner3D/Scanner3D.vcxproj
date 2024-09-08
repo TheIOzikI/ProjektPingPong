@@ -197,7 +197,7 @@
       <OpenMPSupport>true</OpenMPSupport>
       <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalIncludeDirectories>C:\Users\TheIO\OneDrive\ZUT\Mechatronika\Dyplom\dev\eigen-3.4.0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <BrowseInformation>true</BrowseInformation>
+      <BrowseInformation>false</BrowseInformation>
       <LanguageStandard>Default</LanguageStandard>
     </ClCompile>
     <Link>

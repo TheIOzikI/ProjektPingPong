@@ -155,6 +155,7 @@ struct ApplicationWindows {
 		hFont_txt = CreateFontW(35, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, VARIABLE_PITCH | FF_SWISS, L"Tahoma");
 };
 
+//zmienne logiczne
 struct LogicalVariables {
 	uint8 view_rotation = 2, imdisp = 0, // zmienna wybierająca sposob wyswietlania obrazów
 		fps = 40, prediction = 0; // zmiana fps, przełączanie typu predykcji
@@ -196,21 +197,37 @@ struct prevPoints3D {
 
 //struktura przechowująca punkty przecinające płaszczyzne Y
 struct CrossPlanePoints {
+	float average_distance;
+	float x;
+	float z;
+};
+
+//struktura przechowująca punkty estymowane z kalmanan
+struct EstimatedPoints {
 	vector<float> x;
 	vector<float> y;
 	vector<float> z;
 };
 
-struct EstimatedPoints {
-	vector<double> x;
-	vector<double> y;
-	vector<double> z;
+//struktura przechowująca punkty predykcji z kalmana
+struct PredictedPoints {
+	vector<vector<float>> x;
+	vector<vector<float>> y;
+	vector<vector<float>> z;
 };
 
-struct PredictedPoints {
-	vector<vector<double>> x;
-	vector<vector<double>> y;
-	vector<vector<double>> z;
+//Struktura przechowująca punkty z predykcji sposobem wielomianu
+struct polyfitPredictionPoints {
+	vector<float> x;
+	vector<float> y;
+	vector<float> z;
+};
+
+//Struktura przechowująca punkty z predykcji sposobem  równań ruchu
+struct NewtonPoints {
+	vector<float> x;
+	vector<float> y;
+	vector<float> z;
 };
 
 // Struktura dla markerów xreferencyjnych z krzyża kalibracyjnego

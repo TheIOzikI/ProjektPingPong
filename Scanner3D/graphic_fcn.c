@@ -19,6 +19,9 @@ extern Point4 corners_cam1[4], corners_cam2[4];
 extern MatrixXd prevPointsIn3f;
 extern PredictedPoints predicted_point;
 extern EstimatedPoints estimated_point;
+extern CrossPlanePoints crossplanepoints;
+extern polyfitPredictionPoints polyfit_points;
+extern NewtonPoints predicted_points_newton;
 
 void initGraphics(void)
 {
@@ -453,21 +456,20 @@ void dxRenderFrame(void)
 		}
 
 		//rysowanie predykcja kalman
-		if (logicVariables.prediction == 1 || logicVariables.prediction == 4) {
+		if (logicVariables.prediction == 1) {
 
 			D3DXVECTOR3 lineVertices[2]; // Do przechowywania punktów końców linii
 
-			double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
 			int n = prevPointsIn3f.rows();  // liczba pomiarów
-			int n_future = round(dT * predictiontime);  // liczba kroków do przodu
+			int n_future = round(dT * PREDICTION_TIME);  // liczba kroków do przodu
 
-		 for (uint8 k = 0; k < n; ++k) {
-			 //rysowanie punktów estymowanych
-			 D3DXMatrixTranslation(&matTrans, estimated_point.x[k], estimated_point.y[k], estimated_point.z[k]);
-			 D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
-			 d3ddev->SetTransform(D3DTS_WORLD, &temp);
-			 setColor(0.5f, 1.0f, 0.0f, 1.0f, 0.5f, 1.0f, 0.0f, 1.0f);
-			 sphere_small->DrawSubset(0);
+			for (uint8 k = 0; k < n; ++k) {
+				//rysowanie punktów estymowanych
+				D3DXMatrixTranslation(&matTrans, estimated_point.x[k], estimated_point.y[k], estimated_point.z[k]);
+				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+				d3ddev->SetTransform(D3DTS_WORLD, &temp);
+				setColor(0.5f, 1.0f, 0.0f, 1.0f, 0.5f, 1.0f, 0.0f, 1.0f);
+				sphere_small->DrawSubset(0);
 				for (uint8 j = 0; j < n_future; ++j) {
 					//rysowanie punktów predykcji
 					D3DXMatrixTranslation(&matTrans, predicted_point.x[k][j], predicted_point.y[k][j], predicted_point.z[k][j]);
@@ -475,7 +477,7 @@ void dxRenderFrame(void)
 					d3ddev->SetTransform(D3DTS_WORLD, &temp);
 					setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
 					sphere_small->DrawSubset(0);
-					
+
 					//Wyznaczenie punktów do rysowania linii predykcji
 					lineVertices[0] = D3DXVECTOR3(predicted_point.x[k][j], predicted_point.y[k][j], predicted_point.z[k][j]);
 					lineVertices[1] = D3DXVECTOR3(predicted_point.x[k][j], predicted_point.y[k][j], predicted_point.z[k][j]);
@@ -484,11 +486,60 @@ void dxRenderFrame(void)
 
 					//Rysowanie linii między dwoma punktami
 					d3ddev->DrawPrimitiveUP(D3DPT_LINELIST, 1, lineVertices, sizeof(D3DXVECTOR3));
-		 
+
 				}
 			}
 		}
 
+		//rysowanie predykcja kalman
+		if (logicVariables.prediction == 2) {
+
+			D3DXVECTOR3 lineVertices[2]; // Do przechowywania punktów końców linii
+
+			for (uint8 i = 0; i <= polyfit_points.x.size(); ++i) {
+				//rysowanie punktów predykcji
+				D3DXMatrixTranslation(&matTrans, polyfit_points.x[i], polyfit_points.y[i], polyfit_points.z[i]);
+				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+				d3ddev->SetTransform(D3DTS_WORLD, &temp);
+				setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+				sphere_small->DrawSubset(0);
+
+				//Wyznaczenie punktów do rysowania linii predykcji
+				lineVertices[0] = D3DXVECTOR3(polyfit_points.x[i], polyfit_points.y[i], polyfit_points.z[i]);
+				lineVertices[1] = D3DXVECTOR3(polyfit_points.x[i], polyfit_points.y[i], polyfit_points.z[i]);
+
+				d3ddev->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_XRGB(0, 255, 0));
+
+				//Rysowanie linii między dwoma punktami
+				d3ddev->DrawPrimitiveUP(D3DPT_LINELIST, 1, lineVertices, sizeof(D3DXVECTOR3));
+
+			}
+		}
+		
+		//Rysowanie predykcja równania ruchu
+		if (logicVariables.prediction == 3) {
+
+			D3DXVECTOR3 lineVertices[2]; // Do przechowywania punktów końców linii
+
+			for (uint8 i = 0; i <= predicted_points_newton.x.size(); ++i) {
+				//rysowanie punktów predykcji
+				D3DXMatrixTranslation(&matTrans, predicted_points_newton.x[i], predicted_points_newton.y[i], predicted_points_newton.z[i]);
+				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+				d3ddev->SetTransform(D3DTS_WORLD, &temp);
+				setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+				sphere_small->DrawSubset(0);
+
+				//Wyznaczenie punktów do rysowania linii predykcji
+				lineVertices[0] = D3DXVECTOR3(predicted_points_newton.x[i], predicted_points_newton.y[i], predicted_points_newton.z[i]);
+				lineVertices[1] = D3DXVECTOR3(predicted_points_newton.x[i], predicted_points_newton.y[i], predicted_points_newton.z[i]);
+
+				d3ddev->SetRenderState(D3DRS_AMBIENT, D3DCOLOR_XRGB(0, 255, 0));
+
+				//Rysowanie linii między dwoma punktami
+				d3ddev->DrawPrimitiveUP(D3DPT_LINELIST, 1, lineVertices, sizeof(D3DXVECTOR3));
+
+			}
+		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 		////////////////////////////////////////// KONIEC RYSOWANIA BRYŁ //////////////////////////////////////////////
@@ -510,10 +561,24 @@ void dxRenderFrame(void)
 		//typ predykcji
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 + 900), 500); // pierwszy - szerokość, drugi - wysokość
 		if (logicVariables.prediction == 0 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: BRAK", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		if (logicVariables.prediction == 1 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Kalman", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		if (logicVariables.prediction == 2 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Ap. Wielomianowa", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		if (logicVariables.prediction == 2 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Równania ruchu", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		if (logicVariables.prediction == 4 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: ALL", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+		if (logicVariables.prediction == 1 && g_font2 != nullptr) {
+			g_font2->DrawText(NULL, L"Typ predykcji: Kalman", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+			wchar_t optimalKalman[100];
+			swprintf(optimalKalman, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
+			SetRect(&font_rect, 10, 500, 200, 200);
+		}
+		if (logicVariables.prediction == 2 && g_font2 != nullptr) {
+			g_font2->DrawText(NULL, L"Typ predykcji: Ap. Wielomianowa", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+			wchar_t optimalPolynomial[100];
+			swprintf(optimalPolynomial, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
+			SetRect(&font_rect, 10, 500, 200, 200);
+		}
+		if (logicVariables.prediction == 3 && g_font2 != nullptr) {
+			g_font2->DrawText(NULL, L"Typ predykcji: Równania ruchu", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+			wchar_t optimalBasic[100];
+			swprintf(optimalBasic, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
+			SetRect(&font_rect, 10, 500, 200, 200);
+		}
 		
 		//trajektoria
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 + 900), 300); // pierwszy - szerokość, drugi - wysokość

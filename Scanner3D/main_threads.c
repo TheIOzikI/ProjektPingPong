@@ -10,6 +10,9 @@ Marker3D m3d;
 prevPoints3D prev_points;
 EstimatedPoints estimated_point;
 PredictedPoints predicted_point;
+CrossPlanePoints crossplanepoints;
+polyfitPredictionPoints polyfit_points;
+NewtonPoints predicted_points_newton;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
@@ -264,19 +267,20 @@ void liveDataProcessing(void*)
 			if(logicVariables.prediction == 1){
 				//Kalman filter
 				kalmanPrediction(prev_points);
-			}
+				double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
+				int n = prevPointsIn3f.rows();  // liczba pomiarów
+				int n_future = round(dT * predictiontime);  // liczba kroków do przodu
+				optimalStrikePointKalman(predicted_point.x, predicted_point.y, predicted_point.z, n, n_future, 1500.0f, 10.0f);
+				}
 			if (logicVariables.prediction == 2){
 				//Aproksymacja wielomianowa
-
+				polyfitPreciction(prev_points.x, prev_points.y, prev_points.z);
+				optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
 			}
 			if (logicVariables.prediction == 3) {
 				//Równania ruchu
-
-			}
-			if (logicVariables.prediction == 4) {
-				//Wszystkie predykcje na raz - kalman, wielomian, równania ruchu
-				kalmanPrediction(prev_points);
-
+				newtonPrediction(prev_points.x, prev_points.y, prev_points.z);
+				optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
 			}
 
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
@@ -338,6 +342,7 @@ void setExposure(uint64 exp, int mode)
 	}
 }
 
+//rekonstrukcja markerów do 3D
 void reconstructMarkers3D(void)
 {
 	uint8 i = 0, k = 0, li = 0;
@@ -461,6 +466,7 @@ void reconstructMarkers3D(void)
 	_aligned_free(vr3);
 }
 
+//Szukanie markerów na obrazie
 void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 disp, bool mkr_color)
 {
 	uint8 idxc = 0, idxu = 0, codeNum;
@@ -533,6 +539,7 @@ void findMarkers(Mat& img, Mat& bImg, Marker* coded_markers, uint8 mode, uint8 d
 	}
 }
 
+//Szukanie pi³ki na obrazie
 void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	// Definiowanie zakresu HSV dla koloru pomarañczowego
 	Scalar lowerBound(5, 180, 100);
@@ -586,6 +593,7 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	}
 }
 
+//Lista pozycji pi³ki
 void listBall3dPositions(Marker3D m3d) {
 	if (m3d.isSet[0] == true) {
 		// przepisanie punktów do odpowiednich wektorów
@@ -612,6 +620,7 @@ void listBall3dPositions(Marker3D m3d) {
 	}
 }
 
+//kalman matrix
 MatrixXd convertToMatrix(const prevPoints3D& prev_points) {
 	size_t n = prev_points.x.size();
 	MatrixXd prevPointsIn3f(n, 3);
@@ -625,16 +634,19 @@ MatrixXd convertToMatrix(const prevPoints3D& prev_points) {
 	return prevPointsIn3f;
 }
 
+//kalman gain
 MatrixXd kalman_gain(const MatrixXd& P, const MatrixXd& H, const MatrixXd& R) {
 	return P * H.transpose() * (H * P * H.transpose() + R).inverse();
 }
 
+//zmienne globalne dla kalmana
 void initializeStates(int n, int n_future) {
 	// Inicjalizacja globalnych zmiennych
 	estimated_states.resize(n, VectorXd::Zero(9));
 	predicted_states.resize(n, vector<MatrixXd>(n_future, VectorXd::Zero(9)));
 }
 
+//G³ówny kod kalmana
 void kalmanPrediction(prevPoints3D prev_points) {
 	double bounce_damping_factor = 0.8;  // wspó³czynnik t³umienia odbicia
 	double g = 9.8;  // przyspieszenie grawitacyjne
@@ -680,6 +692,13 @@ void kalmanPrediction(prevPoints3D prev_points) {
 		// Aktualizacja macierzy b³êdu
 		P = (MatrixXd::Identity(9, 9) - K * H) * P;
 
+		//czyszczenie tablic
+		estimated_point.x.clear();
+		estimated_point.y.clear();
+		estimated_point.z.clear();
+		estimated_point.x.shrink_to_fit();
+		estimated_point.y.shrink_to_fit();
+		estimated_point.z.shrink_to_fit();
 		// Przechowywanie oszacowanego stanu w strukturze
 		estimated_point.x[k] = x(0);
 		estimated_point.y[k] = x(1);
@@ -696,10 +715,199 @@ void kalmanPrediction(prevPoints3D prev_points) {
 				x_future(5) = -x_future(5) * bounce_damping_factor;
 			}
 
+			//czyszczenie tablic
+			predicted_point.x.clear();
+			predicted_point.y.clear();
+			predicted_point.z.clear();
+			predicted_point.x.shrink_to_fit();
+			predicted_point.y.shrink_to_fit();
+			predicted_point.z.shrink_to_fit();
 			// Przechowywanie przewidywanego stanu
 			predicted_point.x[k][j] = x_future(0);
 			predicted_point.y[k][j] = x_future(1);
 			predicted_point.z[k][j] = x_future(2);
+		}
+	}
+}
+
+// Funkcja do dopasowania wielomianu oraz przewidywania wartoœci
+void polyfitPreciction(vector<float>& x,vector<float>& y,vector<float>& z) {
+	
+	int degree = 2;
+
+	int n = x.size();
+
+	// Macierze do obliczeñ
+	MatrixXf A(n, degree + 1);
+	VectorXf b_x(n), b_y(n), b_z(n);
+
+	// Wype³nianie macierzy A dla wspó³czynników wielomianu
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j <= degree; ++j) {
+			A(i, j) = pow(i + 1, j);
+		}
+		b_x(i) = x[i];
+		b_y(i) = y[i];
+		b_z(i) = z[i];
+	}
+
+	// Obliczanie wspó³czynników wielomianów
+	VectorXf p_x = A.colPivHouseholderQr().solve(b_x);
+	VectorXf p_y = A.colPivHouseholderQr().solve(b_y);
+	VectorXf p_z = A.colPivHouseholderQr().solve(b_z);
+
+	// czyszczenie tablic
+	polyfit_points.x.clear();
+	polyfit_points.y.clear();
+	polyfit_points.z.clear();
+	polyfit_points.x.shrink_to_fit();
+	polyfit_points.y.shrink_to_fit();
+	polyfit_points.z.shrink_to_fit();
+
+	// Przewidywanie wartoœci dla istniej¹cych punktów
+	for (int i = 0; i < n; ++i) {
+		float pred_x = 0, pred_y = 0, pred_z = 0;
+		for (int j = 0; j <= degree; ++j) {
+			pred_x += p_x(j) * pow(i + 1, j);
+			pred_y += p_y(j) * pow(i + 1, j);
+			pred_z += p_z(j) * pow(i + 1, j);
+		}
+		polyfit_points.x.push_back(pred_x);
+		polyfit_points.y.push_back(pred_y);
+		polyfit_points.z.push_back(pred_z);
+	}
+
+	// Przewidywanie przysz³ych wartoœci
+
+	double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
+	int future_points = round(dT * predictiontime);  // liczba kroków do przodu
+
+	for (int i = n; i < n + future_points; ++i) {
+		float pred_x = 0, pred_y = 0, pred_z = 0;
+		for (int j = 0; j <= degree; ++j) {
+			pred_x += p_x(j) * pow(i + 1, j);
+			pred_y += p_y(j) * pow(i + 1, j);
+			pred_z += p_z(j) * pow(i + 1, j);
+		}
+		polyfit_points.x.push_back(pred_x);
+		polyfit_points.y.push_back(pred_y);
+		polyfit_points.z.push_back(pred_z);
+	}
+}
+
+void newtonPrediction(vector<float>& x, vector<float>& y, vector<float>& z) {
+	int n = x.size();
+	int n_future = dT * PREDICTION_TIME;
+
+	// Obliczanie prêdkoœci (vx, vy, vz)
+	vector<float> vx(n - 1), vy(n - 1), vz(n - 1);
+	for (size_t i = 0; i < n - 1; ++i) {
+		vx[i] = (x[i + 1] - x[i]) / dT;
+		vy[i] = (y[i + 1] - y[i]) / dT;
+		vz[i] = (z[i + 1] - z[i]) / dT;
+	}
+
+	// Obliczanie przyspieszenia (ax, ay, az)
+	vector<float> ax(n - 2), ay(n - 2), az(n - 2);
+	for (size_t i = 0; i < n - 2; ++i) {
+		ax[i] = (vx[i + 1] - vx[i]) / dT;
+		ay[i] = (vy[i + 1] - vy[i]) / dT;
+		az[i] = (vz[i + 1] - vz[i]) / dT;
+	}
+
+	// Predykcja kolejnych punktów
+	for (int i = 0; i < n_future; ++i) {
+		float t_pred = i + 1; // Przewidywanie dla ka¿dego kolejnego kroku czasu
+		float x_pred = x[n - 1] + t_pred * vx.back() + 0.5f * ax.back() * t_pred * t_pred;
+		float y_pred = y[n - 1] + t_pred * vy.back() + 0.5f * ay.back() * t_pred * t_pred;
+		float z_pred = z[n - 1] + t_pred * vz.back() + 0.5f * az.back() * t_pred * t_pred;
+
+		predicted_points_newton.x.clear();
+		predicted_points_newton.y.clear();
+		predicted_points_newton.z.clear();
+		predicted_points_newton.x.shrink_to_fit();
+		predicted_points_newton.y.shrink_to_fit();
+		predicted_points_newton.z.shrink_to_fit();
+
+		// Dodawanie przewidywanych punktów do struktury predictedData
+		predicted_points_newton.x.push_back(x_pred);
+		predicted_points_newton.y.push_back(y_pred);
+		predicted_points_newton.z.push_back(z_pred);
+	}
+}
+
+//Optymalne miejsce odbicia dla Klamana z podwójnego wektora
+void optimalStrikePointKalman(vector<vector<float>>& x_data, vector<vector<float>>& y_data, vector<vector<float>>& z_data, int k_size, int j_size, float y_plane, float max_distance) {
+	vector<CrossPlanePoints> intersections;
+
+	// Znajdujemy przeciêcia dla wielu serii punktów
+	for (int k = 0; k < k_size; ++k) {
+		for (int j = 0; j < j_size - 1; ++j) {
+			float y1 = y_data[k][j];
+			float y2 = y_data[k][j + 1];
+
+			if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
+				// Znajdujemy t dla y = y_plane
+				float t = (y_plane - y1) / (y2 - y1);
+				float x_intersection = x_data[k][j] + t * (x_data[k][j + 1] - x_data[k][j]);
+				float z_intersection = z_data[k][j] + t * (z_data[k][j + 1] - z_data[k][j]);
+
+				intersections.push_back({ 0.0f, x_intersection, z_intersection });
+			}
+		}
+	}
+
+	// Obliczamy œredni¹ odleg³oœæ i wspó³rzêdne
+	float total_distance = 0.0f;
+	int count = 0;
+	float sum_x = 0.0f;
+	float sum_z = 0.0f;
+
+	for (size_t i = 0; i < intersections.size(); ++i) {
+		for (size_t j = i + 1; j < intersections.size(); ++j) {
+			float dx = intersections[i].x - intersections[j].x;
+			float dz = intersections[i].z - intersections[j].z;
+			float distance = sqrt(dx * dx + dz * dz);
+
+			if (distance <= max_distance) {
+				total_distance += distance;
+				sum_x += (intersections[i].x + intersections[j].x) / 2;
+				sum_z += (intersections[i].z + intersections[j].z) / 2;
+				++count;
+			}
+		}
+	}
+
+	// Aktualizujemy wartoœci w zmiennej globalnej
+	crossplanepoints.average_distance = (count > 0) ? (total_distance / count) : 0.0f;
+	if (count > 0) {
+		crossplanepoints.x = sum_x / count;
+		crossplanepoints.z = sum_z / count;
+	}
+	else {
+		crossplanepoints.x = 0.0f;
+		crossplanepoints.z = 0.0f;
+	}
+}
+
+//Optymalne miejscie odbicia dla Innych z pojedycznego wektora
+void optimalStrikePointOther(vector<float>& x_data, vector<float>& y_data, vector<float>& z_data, float y_plane) {
+	int size = x_data.size();  // Automatyczne sprawdzenie d³ugoœci wektora
+
+	// Znajdujemy przeciêcia dla pojedynczego wektora punktów
+	for (int i = 0; i < size - 1; ++i) {
+		float y1 = y_data[i];
+		float y2 = y_data[i + 1];
+
+		if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
+			// Znajdujemy t dla y = y_plane
+			float t = (y_plane - y1) / (y2 - y1);
+			float x_intersection = x_data[i] + t * (x_data[i + 1] - x_data[i]);
+			float z_intersection = z_data[i] + t * (z_data[i + 1] - z_data[i]);
+
+			// Zapisujemy punkt przeciêcia w zmiennej globalnej
+			crossplanepoints.x = x_intersection;
+			crossplanepoints.z = z_intersection;
 		}
 	}
 }
