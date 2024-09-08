@@ -294,22 +294,6 @@ void tryInitCameras(void* param)
 	RefPattern[19].y = 147.375353;
 	RefPattern[19].z = -12.695638;
 
-		//FILE* file;
-	//float tempArr[4 * 54] = { 0 };
-	//fopen_s(&file, REF_PATTERN_FILE, "rb");
-	//if (file != NULL) {
-	//	fread(&tempArr, sizeof(struct xRef), 54, file);
-	//	fclose(file);
-	//}
-	//odprintf("\n[Info] Model wzorca z dysku:\n");
-	//for (uint8 i = 0; i < 54; i++) {
-	//	RefPattern[i].code = (unsigned long)tempArr[i];
-	//	RefPattern[i].x = tempArr[54 + i];
-	//	RefPattern[i].y = tempArr[108 + i];
-	//	RefPattern[i].z = tempArr[162 + i];
-	//	odprintf("%d	%f	%f	%f\n", RefPattern[i].code, RefPattern[i].x, RefPattern[i].y, RefPattern[i].z);
-	//}
-
 	// parametry wewnetrzne i zewnetrzne kamer z kalibracji
 	loadCamParams(CAM_LEFT_PARAM_FILE, &cam1);
 	loadCamParams(CAM_RIGHT_PARAM_FILE, &cam2);

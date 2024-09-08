@@ -197,7 +197,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 			// przycisk nr 2! - Typ predykcji
 		case MNU_EMPTY_2:
 			logicVariables.prediction++;
-			if (logicVariables.prediction > 1) logicVariables.imdisp = 0;
+			if (logicVariables.prediction > 3) logicVariables.imdisp = 0;
 			break;
 
 			// przycisk nr 3! - Rysowanie trajektorii

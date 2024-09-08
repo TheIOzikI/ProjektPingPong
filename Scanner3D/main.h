@@ -64,6 +64,8 @@ typedef unsigned long long	uint64;
 //////////zmienione na logicvariable guziki
 //#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
 //#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
+#define PREDICTION_TIME		2 //ile sekund wyprzedzić predykcje
+
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
@@ -190,6 +192,25 @@ struct prevPoints3D {
 	vector<float> y;
 	vector<float> z;
 	int cycles;
+};
+
+//struktura przechowująca punkty przecinające płaszczyzne Y
+struct CrossPlanePoints {
+	vector<float> x;
+	vector<float> y;
+	vector<float> z;
+};
+
+struct EstimatedPoints {
+	vector<double> x;
+	vector<double> y;
+	vector<double> z;
+};
+
+struct PredictedPoints {
+	vector<vector<double>> x;
+	vector<vector<double>> y;
+	vector<vector<double>> z;
 };
 
 // Struktura dla markerów xreferencyjnych z krzyża kalibracyjnego

@@ -8,6 +8,8 @@ vector<MatrixXd> estimated_states;
 vector<vector<MatrixXd>> predicted_states;
 Marker3D m3d;
 prevPoints3D prev_points;
+EstimatedPoints estimated_point;
+PredictedPoints predicted_point;
 extern Camera cam1, cam2;
 extern CRITICAL_SECTION	cs, cs2;
 extern double dT;
@@ -257,14 +259,26 @@ void liveDataProcessing(void*)
 			}
 			reconstructMarkers3D();
 			listBall3dPositions(m3d);
+
+			//metody predykcji
 			if(logicVariables.prediction == 1){
-				//kalman
+				//Kalman filter
 				kalmanPrediction(prev_points);
 			}
 			if (logicVariables.prediction == 2){
-				//jakis inny algorytm predykcji
+				//Aproksymacja wielomianowa
 
 			}
+			if (logicVariables.prediction == 3) {
+				//Równania ruchu
+
+			}
+			if (logicVariables.prediction == 4) {
+				//Wszystkie predykcje na raz - kalman, wielomian, równania ruchu
+				kalmanPrediction(prev_points);
+
+			}
+
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -598,14 +612,14 @@ void listBall3dPositions(Marker3D m3d) {
 	}
 }
 
-MatrixXd convertToMatrix(const prevPoints3D& points) {
-	size_t n = points.x.size();
+MatrixXd convertToMatrix(const prevPoints3D& prev_points) {
+	size_t n = prev_points.x.size();
 	MatrixXd prevPointsIn3f(n, 3);
 
 	for (size_t i = 0; i < n; ++i) {
-		prevPointsIn3f(i, 0) = points.x[i];
-		prevPointsIn3f(i, 1) = points.y[i];
-		prevPointsIn3f(i, 2) = points.z[i];
+		prevPointsIn3f(i, 0) = prev_points.x[i];
+		prevPointsIn3f(i, 1) = prev_points.y[i];
+		prevPointsIn3f(i, 2) = prev_points.z[i];
 	}
 
 	return prevPointsIn3f;
@@ -626,18 +640,21 @@ void kalmanPrediction(prevPoints3D prev_points) {
 	double g = 9.8;  // przyspieszenie grawitacyjne
 
 	MatrixXd A(9, 9);  // macierz przejœcia stanu
-	// Wype³nienie macierzy A...
 	MatrixXd B(9, 1);  // macierz sterowania z grawitacj¹
-	// Wype³nienie macierzy B...
 	MatrixXd H(3, 9);  // macierz pomiarowa
-	// Wype³nienie macierzy H...
+
+
+	//ustawienia predykcji tutaj
 	MatrixXd R = 0.000000000002 * MatrixXd::Identity(3, 3); // szum pomiaru
 	MatrixXd Q = 0.000001 * MatrixXd::Identity(9, 9);       // szum procesu
+
+
+
 	MatrixXd P = MatrixXd::Identity(9, 9);  // macierz b³êdu
 
 	VectorXd x = VectorXd::Zero(9);  // pocz¹tkowa pozycja
 
-	double predictiontime = 3;  // czas predykcji do przodu (w sekundach)
+	double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
 	int n = prevPointsIn3f.rows();  // liczba pomiarów
 	int n_future = round(dT * predictiontime);  // liczba kroków do przodu
 
@@ -663,8 +680,10 @@ void kalmanPrediction(prevPoints3D prev_points) {
 		// Aktualizacja macierzy b³êdu
 		P = (MatrixXd::Identity(9, 9) - K * H) * P;
 
-		// Przechowywanie oszacowanego stanu
-		estimated_states[k] = x;
+		// Przechowywanie oszacowanego stanu w strukturze
+		estimated_point.x[k] = x(0);
+		estimated_point.y[k] = x(1);
+		estimated_point.z[k] = x(2);
 
 		// Predykcja przysz³ych stanów
 		VectorXd x_future = x;
@@ -678,7 +697,9 @@ void kalmanPrediction(prevPoints3D prev_points) {
 			}
 
 			// Przechowywanie przewidywanego stanu
-			predicted_states[k][j] = x_future;
+			predicted_point.x[k][j] = x_future(0);
+			predicted_point.y[k][j] = x_future(1);
+			predicted_point.z[k][j] = x_future(2);
 		}
 	}
 }
