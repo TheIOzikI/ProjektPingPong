@@ -46,7 +46,7 @@ typedef unsigned long long	uint64;
 #define CAM_RIGHT_PARAM_FILE "config\\RIGHT_cam_param.bin" // actual camera parameters
 
 // camera parameters
-#define NUM_BUFFERS			1
+#define NUM_BUFFERS			5
 #define CAM_LEFT_SERIAL		"21858830" // duze baslery USB
 #define CAM_RIGHT_SERIAL	"21562281" // duze baslery USB
 #define CAM_WIDTH			1920U
@@ -64,13 +64,14 @@ typedef unsigned long long	uint64;
 //////////zmienione na logicvariable guziki
 //#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
 //#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
-#define PREDICTION_TIME		2 //ile sekund wyprzedzić predykcje
-#define BOUNCE_FACTOR		0.8//tłumienie wektora w odbiciu
+#define DT					1/50*100 //60fps
+#define PREDICTION_TIME		5 //ile sekund wyprzedzić predykcje
+#define BOUNCE_FACTOR		0.8 //tłumienie wektora w odbiciu
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
 #define CAM_EXP_MAX			20000U		
-#define CAM_EXP_DEFAULT		2000U		
+#define CAM_EXP_DEFAULT		5000U		
 #define CAM_GAIN_DEFAULT	5
 #define CAM_GAMMA			1.5
 
@@ -127,7 +128,7 @@ struct ApplicationWindows {
 		bool menu_item_enabled[14];
 	} NamedButtons = {
 		{ // inicjalizacja tablicy appWindows.menu_buttons.named_buttons.menu_item_names
-			L"Kalibracja par. zewnętrznych", L"Typ predykcji", L"Rysowanie trajektorii", L"-5 FPS", L"+5 FPS", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
+			L"Kalibracja par. zewnętrznych", L"Typ predykcji", L"Rysowanie trajektorii", L"Szukanie markerów ON/OFf", L"40/5 FPS", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
 			L"Autoekspozycja", L"Typ obrazów",L"Zakończ pracę",  L"widok XY", L"widok YZ", L"widok XZ"
 		},
 		{ // inicjalizacja tablicy menu_item_enabled -> status przycisków (1 - aktywny, 0 - nieaktywny)
@@ -158,10 +159,10 @@ struct ApplicationWindows {
 //zmienne logiczne
 struct LogicalVariables {
 	uint8 view_rotation = 2, imdisp = 0, // zmienna wybierająca sposob wyswietlania obrazów
-		fps = 40, prediction = 0; // zmiana fps, przełączanie typu predykcji
+	prediction = 0; //przełączanie typu predykcji
 	bool stop_exe = false, save_img_1 = false, save_img_2 = false,
-		auto_exp = false, mkr_color = false, // 0 (false) = czarny srodek  1 (true) = bialy srodek
-		trajectory = true; // wyświetlanie trajektorii
+		auto_exp = false, mkr_color = true, // 0 (false) = czarny srodek  1 (true) = bialy srodek
+		trajectory = false, fps = false, marker = false; // wyświetlanie trajektorii
 };
 
 // strukura dla markerow plaskich na obrazie
@@ -211,9 +212,9 @@ struct EstimatedPoints {
 
 //struktura przechowująca punkty predykcji z kalmana
 struct PredictedPoints {
-	vector<vector<float>> x;
-	vector<vector<float>> y;
-	vector<vector<float>> z;
+	vector<float> x;
+	vector<float> y;
+	vector<float> z;
 };
 
 //Struktura przechowująca punkty z predykcji sposobem wielomianu

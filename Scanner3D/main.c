@@ -197,7 +197,7 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 			// przycisk nr 2! - Typ predykcji
 		case MNU_EMPTY_2:
 			logicVariables.prediction++;
-			if (logicVariables.prediction > 3) logicVariables.imdisp = 0;
+			if (logicVariables.prediction > 3) logicVariables.prediction = 0;
 			break;
 
 			// przycisk nr 3! - Rysowanie trajektorii
@@ -205,28 +205,14 @@ LRESULT CALLBACK wndProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 			logicVariables.trajectory = !logicVariables.trajectory;
 			break;
 
-			// przycisk nr 4! - -5FPS
+			// przycisk nr 4! - Szukanie markerów
 		case MNU_EMPTY_4:
-			if (logicVariables.fps > 10) {
-				logicVariables.fps = logicVariables.fps - 5;
-			}
-			else
-			{
-				logicVariables.fps = 5;
-			}
-			odprintf("[Info] FPS	%u\n", logicVariables.fps);
+			logicVariables.marker = !logicVariables.marker;
 			break;
 
-			// przycisk nr 5! - +5FPS
+			// przycisk nr 5! - 40/5FPS
 		case MNU_EMPTY_5:
-			if (logicVariables.fps < 60) {
-				logicVariables.fps = logicVariables.fps + 5;
-			}
-			else
-			{
-				logicVariables.fps = 60;
-			}
-			odprintf("[Info] FPS	%u\n", logicVariables.fps);
+			logicVariables.fps = !logicVariables.fps;
 			break;
 
 			// przycisk nr 6! - zapis zdjęcia L

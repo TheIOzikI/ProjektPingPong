@@ -165,8 +165,14 @@ bool initCameras(void)
 
 	////////////////////////////////light source/////////////////
 	/* Set the light source preset for daylight (at about 6500K) */
-	errRes = PylonDeviceFeatureFromString(hCam1, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
-	errRes = PylonDeviceFeatureFromString(hCam2, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
+	//errRes = PylonDeviceFeatureFromString(hCam1, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
+	//errRes = PylonDeviceFeatureFromString(hCam2, "LightSourcePreset", "Daylight6500K");	pylonCheck(errRes);
+
+
+	//errRes = PylonDeviceSetBooleanFeature(hCam1, "AcquisitionFrameRateEnable", 1); pylonCheck(errRes);
+	//errRes = PylonDeviceSetBooleanFeature(hCam2, "AcquisitionFrameRateEnable", 1); pylonCheck(errRes);
+	//errRes = PylonDeviceSetFloatFeature(hCam1, "AcquisitionFrameRate", 10.0);pylonCheck(errRes);
+	//errRes = PylonDeviceSetFloatFeature(hCam2, "AcquisitionFrameRate", 10.0); pylonCheck(errRes);
 
 	////////////////// ustawienie ekspozycji //////////////////
 	/* Determine the current exposure time */

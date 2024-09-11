@@ -92,11 +92,10 @@ void liveFeed(void* param)
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
 			// detekcja markerow (dziala tylko gdy kalibracja)
-			findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
+			if(logicVariables.marker == true) findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
 			findBall(cam->grayImg, cam->colorImg, cam->coded_markers);
-			if(cam->cam_num == 1)odprintf("%f	%f\n", cam->coded_markers[0].x, cam->coded_markers[0].y);
 			
 			//undistort points
 				if (cam->coded_markers[0].isSet) {
@@ -238,8 +237,7 @@ void liveDataProcessing(void*)
 
 	// set up and initialize Direct3D
 	dxInit(appWindows.panel3D);
-
-
+	
 	while (!logicVariables.stop_exe) {
 		begin1 = clock();
 		begin2 = clock();
@@ -262,33 +260,32 @@ void liveDataProcessing(void*)
 				}
 			}
 			reconstructMarkers3D();
-			listBall3dPositions(m3d);
+			listBall3dPositions();
 
 			//metody predykcji
-			if(logicVariables.prediction == 1){
+			if(logicVariables.prediction == 1 && prev_points.x.size() > 10){
 				//Kalman filter
-				kalmanPrediction(prev_points);
+				kalmanPrediction();
 				double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
-				int n = prevPointsIn3f.rows();  // liczba pomiarów
-				int n_future = round(dT * predictiontime);  // liczba kroków do przodu
-				optimalStrikePointKalman(predicted_point.x, predicted_point.y, predicted_point.z, n, n_future, 1500.0f, 100.0f);
-				odprintf("[Prediction Type] Kalman\n");
+				int n = prev_points.x.size();  // liczba pomiarów
+				int n_future = round(dT * 1000 *  predictiontime);  // liczba kroków do przodu
+				//if (predicted_point.x.size()>4) optimalStrikePointKalman(predicted_point.x, predicted_point.y, predicted_point.z, n, n_future, 1500.0f, 100.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 				}
-			if (logicVariables.prediction == 2){
+			if (logicVariables.prediction == 2 && prev_points.x.size() > 10){
 				//Aproksymacja wielomianowa
-				polyfitPrediction(prev_points.x, prev_points.y, prev_points.z);
-				optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
-				odprintf("[Prediction Type] Polyfit\n");
+				polyfitPrediction();
+				//if (polyfit_points.x.size() > 4) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
-			if (logicVariables.prediction == 3) {
+			if (logicVariables.prediction == 3 && prev_points.x.size() > 10) {
 				//Równania ruchu
-				newtonPrediction(prev_points.x, prev_points.y, prev_points.z);
-				optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
-				odprintf("[Prediction Type] Newton\n");
+				newtonPrediction();
+				if (predicted_points_newton.x.size() > 4) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
 
 			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
-			odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -306,7 +303,7 @@ void liveDataProcessing(void*)
 			li2 = 0;
 		}
 		end2 = clock();
-		loop = (uint)abs(logicVariables.fps - 1000.0 * (((double)end2 - (double)begin2) / CLOCKS_PER_SEC));
+		loop = (uint)abs(DT - 1000.0 * (((double)end2 - (double)begin2) / CLOCKS_PER_SEC));
 		// pozosta³y czas wolny
 		Sleep((DWORD)loop);
 		end1 = clock();
@@ -600,20 +597,23 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 }
 
 //Lista pozycji pi³ki
-void listBall3dPositions(Marker3D m3d) {
+void listBall3dPositions() {
 	if (m3d.isSet[0] == true) {
 		// przepisanie punktów do odpowiednich wektorów
-		prev_points.x.push_back(m3d.x[0]);
-		prev_points.y.push_back(m3d.y[0]);
-		prev_points.z.push_back(m3d.z[0]);
+		if (prev_points.x.size() < 250) {
+			prev_points.x.push_back(m3d.x[0]);
+			prev_points.y.push_back(m3d.y[0]);
+			prev_points.z.push_back(m3d.z[0]);
+		}
+
 	}
 	else
 	{
-		prev_points.cycles++;
-		odprintf("[Info] Ball not seen\n");
+		prev_points.cycles = prev_points.cycles + 1;
+		//odprintf("[Info] Ball not seen %i \n", prev_points.cycles);
 	}
-	//kasowanie trajektorii po 3 sekundach bez widocznej pi³ki 
-	if(prev_points.cycles >= 3 * dT) {
+	//kasowanie trajektorii 
+	if(prev_points.cycles >= 200) {
 		// wyczyszczenie wszystkich wektorów
 		prev_points.x.clear();
 		prev_points.y.clear();
@@ -626,47 +626,10 @@ void listBall3dPositions(Marker3D m3d) {
 	}
 }
 
-//kalman matrix
-MatrixXd convertToMatrix(const prevPoints3D& prev_points) {
-	size_t n = prev_points.x.size();
-	MatrixXd prevPointsIn3f(n, 3);
-
-	for (size_t i = 0; i < n; ++i) {
-		prevPointsIn3f(i, 0) = prev_points.x[i];
-		prevPointsIn3f(i, 1) = prev_points.y[i];
-		prevPointsIn3f(i, 2) = prev_points.z[i];
-	}
-
-	return prevPointsIn3f;
-}
-
-//kalman gain
-MatrixXd kalman_gain(const MatrixXd& P, const MatrixXd& H, const MatrixXd& R) {
-	return P * H.transpose() * (H * P * H.transpose() + R).inverse();
-}
-
-//zmienne globalne dla kalmana
-void initializeStates(int n, int n_future) {
-	// Inicjalizacja globalnych zmiennych
-	estimated_states.resize(n, VectorXd::Zero(9));
-	predicted_states.resize(n, vector<MatrixXd>(n_future, VectorXd::Zero(9)));
-}
-
-//G³ówny kod kalmana
-void kalmanPrediction(prevPoints3D prev_points) {
-	double g = 9.8;  // przyspieszenie grawitacyjne
-
-	MatrixXd A(9, 9); 
-	MatrixXd B(9, 1); 
-	MatrixXd H(3, 9); 
-	
-	//czyszczenie tablic
-	predicted_point.x.clear();
-	predicted_point.y.clear();
-	predicted_point.z.clear();
-	predicted_point.x.shrink_to_fit();
-	predicted_point.y.shrink_to_fit();
-	predicted_point.z.shrink_to_fit();
+void kalmanPrediction() {
+	float g = 9.8;
+	int n = prev_points.x.size();  // Liczba pomiarów
+	int n_future = 40;  // liczba kroków do przodu
 
 	estimated_point.x.clear();
 	estimated_point.y.clear();
@@ -674,73 +637,115 @@ void kalmanPrediction(prevPoints3D prev_points) {
 	estimated_point.x.shrink_to_fit();
 	estimated_point.y.shrink_to_fit();
 	estimated_point.z.shrink_to_fit();
+	predicted_point.x.clear();
+	predicted_point.y.clear();
+	predicted_point.z.clear();
+	predicted_point.x.shrink_to_fit();
+	predicted_point.y.shrink_to_fit();
+	predicted_point.z.shrink_to_fit();
 
-	//ustawienia predykcji tutaj
-	MatrixXd R = 0.000000000002 * MatrixXd::Identity(3, 3); // szum pomiaru
-	MatrixXd Q = 0.000001 * MatrixXd::Identity(9, 9);       // szum procesu
+	// Inicjalizacja wektora stanu [px, py, pz, vx, vy, vz, ax, ay, az]
+	VectorXf x(9);
+	x << 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
+	// Macierz przejœcia stanu A
+	MatrixXf A(9, 9);
+	A << 1, 0, 0, DT, 0, 0, 0.5 * DT * DT, 0, 0,
+		0, 1, 0, 0, DT, 0, 0, 0.5 * DT * DT, 0,
+		0, 0, 1, 0, 0, DT, 0, 0, 0.5 * DT * DT,
+		0, 0, 0, 1, 0, 0, DT, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, DT, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, DT,
+		0, 0, 0, 0, 0, 0, 1, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 1, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 1;
 
+	// Macierz kontrolna B (grawitacja)
+	VectorXf B(9);
+	B << 0, 0, -0.5 * DT * DT * g, 0, 0, -DT * g, 0, 0, 0;
 
-	MatrixXd P = MatrixXd::Identity(9, 9);  // macierz b³êdu
+	// Macierz pomiaru H (pomiar tylko pozycji)
+	MatrixXf H(3, 9);
+	H << 1, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 1, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 1, 0, 0, 0, 0, 0, 0;
 
-	VectorXd x = VectorXd::Zero(9);  // pocz¹tkowa pozycja
+	// Macierz kowariancji b³êdów
+	MatrixXf P = MatrixXf::Identity(9, 9);
+	MatrixXf Q = 0.001 * MatrixXf::Identity(9, 9);
+	MatrixXf R = 0.000002 * MatrixXf::Identity(3, 3);
 
-	int n = prevPointsIn3f.rows();  // liczba pomiarów
-	int n_future = round(dT * PREDICTION_TIME);  // liczba kroków do przodu
+	// Pomiary bêd¹ reprezentowane jako wektor
+	vector<Vector3f> measurements(n);
+	for (int i = 0; i < n; ++i) {
+		measurements[i] << prev_points.x[i], prev_points.y[i], prev_points.z[i];
+	}
 
-	// Inicjalizacja globalnych zmiennych
-	initializeStates(n, n_future);
+	// Zestaw prognozowanych stanów
+	vector<float> estimated_x(n), estimated_y(n), estimated_z(n);
+	vector<vector<float>> predicted_x(n, vector<float>(n_future)), predicted_y(n, vector<float>(n_future)), predicted_z(n, vector<float>(n_future));
 
+	// G³ówna pêtla
 	for (int k = 0; k < n; ++k) {
 		// Krok predykcji
 		x = A * x + B;
 		P = A * P * A.transpose() + Q;
 
-		// Aktualizacja filtra Kalmana
-		VectorXd z = prevPointsIn3f.row(k).transpose();
-		MatrixXd K = kalman_gain(P, H, R); 
+		// Aktualizacja na podstawie pomiaru
+		Vector3f z = measurements[k];
+		MatrixXf K = P * H.transpose() * (H * P * H.transpose() + R).inverse();
 		x = x + K * (z - H * x);
+		P = (MatrixXf::Identity(9, 9) - K * H) * P;
 
-		// Wykrycie odbicia (jeœli pozycja z <= 0)
+		// Sprawdzenie odbicia
 		if (x(2) <= 0) {
 			x(2) = 0;
 			x(5) = -x(5) * BOUNCE_FACTOR;
 		}
 
-		// Aktualizacja macierzy b³êdu
-		P = (MatrixXd::Identity(9, 9) - K * H) * P;
+		// Przechowywanie oszacowanych wspó³rzêdnych
+
+		estimated_point.x.push_back(x(0));
+		estimated_point.y.push_back(x(1));
+		estimated_point.z.push_back(x(2));
 
 
-		// Przechowywanie oszacowanego stanu w strukturze
-		estimated_point.x[k] = x(0);
-		estimated_point.y[k] = x(1);
-		estimated_point.z[k] = x(2);
-
-		// Predykcja przysz³ych stanów
-		VectorXd x_future = x;
+		// Prognoza na przysz³e 10 kroków
+		VectorXf x_future = x;
 		for (int j = 0; j < n_future; ++j) {
 			x_future = A * x_future;
 
-			// Wykrycie odbicia dla przewidywanych stanów
+			// Sprawdzenie odbicia w prognozie
 			if (x_future(2) <= 0) {
 				x_future(2) = 0;
 				x_future(5) = -x_future(5) * BOUNCE_FACTOR;
 			}
 
-			// Przechowywanie przewidywanego stanu
-			predicted_point.x[k][j] = x_future(0);
-			predicted_point.y[k][j] = x_future(1);
-			predicted_point.z[k][j] = x_future(2);
+			// Przewidywane pozycje
+
+			predicted_point.x.clear();
+			predicted_point.y.clear();
+			predicted_point.z.clear();
+			predicted_point.x.shrink_to_fit();
+			predicted_point.y.shrink_to_fit();
+			predicted_point.z.shrink_to_fit();
+
+			predicted_point.x.push_back(x_future(0));
+			predicted_point.y.push_back(x_future(1));
+			predicted_point.z.push_back(x_future(2));
+
+
+
 		}
 	}
 }
 
 // Funkcja do dopasowania wielomianu oraz przewidywania wartoœci
-void polyfitPrediction(vector<float>& x,vector<float>& y,vector<float>& z) {
+void polyfitPrediction() {
 	
-	int degree = 2;
+	int degree = 3;
 
-	int n = x.size();
+	int n = prev_points.x.size();
 
 	MatrixXf A(n, degree + 1);
 	VectorXf b_x(n), b_y(n), b_z(n);
@@ -749,9 +754,9 @@ void polyfitPrediction(vector<float>& x,vector<float>& y,vector<float>& z) {
 		for (int j = 0; j <= degree; ++j) {
 			A(i, j) = pow(i + 1, j);
 		}
-		b_x(i) = x[i];
-		b_y(i) = y[i];
-		b_z(i) = z[i];
+		b_x(i) = prev_points.x[i];
+		b_y(i) = prev_points.y[i];
+		b_z(i) = prev_points.z[i];
 	}
 
 	// Obliczanie wspó³czynników wielomianów
@@ -782,7 +787,7 @@ void polyfitPrediction(vector<float>& x,vector<float>& y,vector<float>& z) {
 
 	// Przewidywanie przysz³ych wartoœci
 
-	int future_points = round(dT * PREDICTION_TIME);  // liczba kroków do przodu
+	int future_points = round(DT * PREDICTION_TIME);  // liczba kroków do przodu
 
 	for (int i = n; i < n + future_points; ++i) {
 		float pred_x = 0, pred_y = 0, pred_z = 0;
@@ -798,50 +803,57 @@ void polyfitPrediction(vector<float>& x,vector<float>& y,vector<float>& z) {
 	}
 }
 
-void newtonPrediction(vector<float>& x, vector<float>& y, vector<float>& z) {
-	int n = x.size();
-	int n_future = dT * PREDICTION_TIME;
-
+void newtonPrediction() {
+	int n = prev_points.x.size();
+	int n_future = 100;//dT * PREDICTION_TIME;
+	//odprintf("[Info]size of x	%i %i	\n", n, n_future);
+	
 	//czyszczenie struktury przed dodaniem
-	predicted_points_newton.x.clear();
-	predicted_points_newton.y.clear();
-	predicted_points_newton.z.clear();
-	predicted_points_newton.x.shrink_to_fit();
-	predicted_points_newton.y.shrink_to_fit();
-	predicted_points_newton.z.shrink_to_fit();
+	if (predicted_points_newton.x.size() > 1) {
+		predicted_points_newton.x.clear();
+		predicted_points_newton.y.clear();
+		predicted_points_newton.z.clear();
+		predicted_points_newton.x.shrink_to_fit();
+		predicted_points_newton.y.shrink_to_fit();
+		predicted_points_newton.z.shrink_to_fit();
+	}
 
 	// Obliczanie prêdkoœci (vx, vy, vz)
 	vector<float> vx(n - 1), vy(n - 1), vz(n - 1);
 	for (size_t i = 0; i < n - 1; ++i) {
-		vx[i] = (x[i + 1] - x[i]) / dT;
-		vy[i] = (y[i + 1] - y[i]) / dT;
-		vz[i] = (z[i + 1] - z[i]) / dT;
+		vx[i] = (prev_points.x[i + 1] - prev_points.x[i]) / DT;
+		vy[i] = (prev_points.y[i + 1] - prev_points.y[i]) / DT;
+		vz[i] = (prev_points.z[i + 1] - prev_points.z[i]) / DT;
+		//odprintf("[info]speed	%f	%f	%f	\n", vz[i],vy[i],vz[i]);
 	}
 
 	// Obliczanie przyspieszenia (ax, ay, az)
 	vector<float> ax(n - 2), ay(n - 2), az(n - 2);
 	for (size_t i = 0; i < n - 2; ++i) {
-		ax[i] = (vx[i + 1] - vx[i]) / dT;
-		ay[i] = (vy[i + 1] - vy[i]) / dT;
-		az[i] = (vz[i + 1] - vz[i]) / dT;
+		ax[i] = (vx[i + 1] - vx[i]) / DT;
+		ay[i] = (vy[i + 1] - vy[i]) / DT;
+		az[i] = (vz[i + 1] - vz[i]) / DT;
+		//odprintf("[info]acceleration	%f	%f	%f	\n", az[i], ay[i], az[i]);
 	}
-
+	//do tej pory dzia³a potem crash
 	// Predykcja kolejnych punktów
 	for (int i = 0; i < n_future; ++i) {
 		float t_pred = i + 1; // Przewidywanie dla ka¿dego kolejnego kroku czasu
-		float x_pred = x[n - 1] + t_pred * vx.back() + 0.5f * ax.back() * t_pred * t_pred;
-		float y_pred = y[n - 1] + t_pred * vy.back() + 0.5f * ay.back() * t_pred * t_pred;
-		float z_pred = z[n - 1] + t_pred * vz.back() + 0.5f * az.back() * t_pred * t_pred;
+		float x_pred = prev_points.x[n - 1] + t_pred * vx.back() + 0.5f * ax.back() * t_pred * t_pred;
+		float y_pred = prev_points.y[n - 1] + t_pred * vy.back() + 0.5f * ay.back() * t_pred * t_pred;
+		float z_pred = prev_points.z[n - 1] + t_pred * vz.back() + 0.5f * az.back() * t_pred * t_pred;
 
-		// Wykrywanie odbicia
-		if (z_pred < 0) {
-			z_pred = -z_pred;  // Symulacja odbicia
-			vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci vz
-		}
+
 		//dodawanie
 		predicted_points_newton.x.push_back(x_pred);
 		predicted_points_newton.y.push_back(y_pred);
 		predicted_points_newton.z.push_back(z_pred);
+
+		//// Wykrywanie odbicia
+		if (z_pred < 0) {
+			z_pred = -z_pred;  // Symulacja odbicia
+			vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci vz
+		}
 	}
 }
 
