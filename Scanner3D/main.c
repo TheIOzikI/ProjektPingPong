@@ -410,7 +410,7 @@ LRESULT CALLBACK view3DProc(HWND hwnd, uint32 msg, WPARAM wParam, LPARAM lParam)
 		wheelSign = (int16)HIWORD(wParam) / abs((int16)HIWORD(wParam));
 		appWindows.mouse_zoom -= (float)wheelSign * 0.3f; // bylo * pow(2.0f, 0.2f)
 		//odprintf("mouse_zoom = %f\n", mouse_zoom);
-		if (appWindows.mouse_zoom < 1.0f) appWindows.mouse_zoom = 1.0f;
+		if (appWindows.mouse_zoom < 0.5f) appWindows.mouse_zoom = 0.5f;
 	}
 	break;
 

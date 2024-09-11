@@ -64,7 +64,7 @@ typedef unsigned long long	uint64;
 //////////zmienione na logicvariable guziki
 //#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
 //#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
-#define DT					1/50*100 //60fps
+#define DT					1/40*100 //60fps
 #define PREDICTION_TIME		5 //ile sekund wyprzedzić predykcje
 #define BOUNCE_FACTOR		0.8 //tłumienie wektora w odbiciu
 

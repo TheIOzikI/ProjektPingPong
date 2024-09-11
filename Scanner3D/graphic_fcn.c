@@ -512,28 +512,18 @@ void dxRenderFrame(void)
 		swprintf(codeTxt1, 100, L"dT: %.1f", 1 / dT);
 		SetRect(&font_rect, 10, 870, 200, 200);
 		if (g_font != nullptr) g_font->DrawText(NULL, codeTxt1, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
-
+		
 		//typ predykcji
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 200); // pierwszy - szerokość, drugi - wysokość
+
+		wchar_t strikePoint[200];
 		if (logicVariables.prediction == 0 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: BRAK", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		if (logicVariables.prediction == 1 && g_font2 != nullptr) {
-			g_font2->DrawText(NULL, L"Typ predykcji: Kalman", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-			wchar_t optimalKalman[100];
-			swprintf(optimalKalman, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
-			SetRect(&font_rect, 10, 870, 200, 200);
-		}
-		if (logicVariables.prediction == 2 && g_font2 != nullptr) {
-			g_font2->DrawText(NULL, L"Typ predykcji: Ap. Wielomianowa", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-			wchar_t optimalPolynomial[100];
-			swprintf(optimalPolynomial, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
-			SetRect(&font_rect, 10, 870, 200, 200);
-		}
-		if (logicVariables.prediction == 3 && g_font2 != nullptr) {
-			g_font2->DrawText(NULL, L"Typ predykcji: Równania ruchu", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-			wchar_t optimalBasic[100];
-			swprintf(optimalBasic, 100, L"StrkPoint	X:	%.1f	Z:	%.1f", crossplanepoints.x, crossplanepoints.z);
-			SetRect(&font_rect, 10, 870, 200, 200);
-		}
+		if (logicVariables.prediction == 1 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Kalman", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+		if (logicVariables.prediction == 2 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Ap. Wielomianowa", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+		if (logicVariables.prediction == 3 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Równania ruchu", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
+		swprintf(strikePoint, 200, L"StrkPoint X: %.1f  Z: %.1f", crossplanepoints.x, crossplanepoints.z);
+		SetRect(&font_rect, 0, 700, 0, 0);
+		if (g_font != nullptr) g_font->DrawText(NULL, strikePoint, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
 		
 		//trajektoria
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 50); // pierwszy - szerokość, drugi - wysokość

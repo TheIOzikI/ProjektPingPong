@@ -263,29 +263,26 @@ void liveDataProcessing(void*)
 			listBall3dPositions();
 
 			//metody predykcji
-			if(logicVariables.prediction == 1 && prev_points.x.size() > 10){
+			if(logicVariables.prediction == 1 && prev_points.x.size() > 3){
 				//Kalman filter
 				kalmanPrediction();
-				double predictiontime = PREDICTION_TIME;  // czas predykcji do przodu (w sekundach)
-				int n = prev_points.x.size();  // liczba pomiarów
-				int n_future = round(dT * 1000 *  predictiontime);  // liczba kroków do przodu
-				//if (predicted_point.x.size()>4) optimalStrikePointKalman(predicted_point.x, predicted_point.y, predicted_point.z, n, n_future, 1500.0f, 100.0f);
+				if (predicted_point.x.size()>0) optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1500.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 				}
-			if (logicVariables.prediction == 2 && prev_points.x.size() > 10){
+			if (logicVariables.prediction == 2 && prev_points.x.size() > 3){
 				//Aproksymacja wielomianowa
 				polyfitPrediction();
-				//if (polyfit_points.x.size() > 4) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
+				if (polyfit_points.x.size() > 0) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
-			if (logicVariables.prediction == 3 && prev_points.x.size() > 10) {
+			if (logicVariables.prediction == 3 && prev_points.x.size() > 3) {
 				//Równania ruchu
 				newtonPrediction();
-				if (predicted_points_newton.x.size() > 4) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
+				if (predicted_points_newton.x.size() > 0) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
 
-			//odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
+			odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -805,7 +802,7 @@ void polyfitPrediction() {
 
 void newtonPrediction() {
 	int n = prev_points.x.size();
-	int n_future = 100;//dT * PREDICTION_TIME;
+	int n_future = 10;//dT * PREDICTION_TIME;
 	//odprintf("[Info]size of x	%i %i	\n", n, n_future);
 	
 	//czyszczenie struktury przed dodaniem
@@ -918,17 +915,19 @@ void optimalStrikePointOther(vector<float>& x_data, vector<float>& y_data, vecto
 
 	// Znajdujemy przeciêcia dla pojedynczego wektora punktów
 	for (int i = 0; i < size - 1; ++i) {
-		
-		float y1 = y_data[i];
-		float y2 = y_data[i + 1];
-		
-		if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
-			float t = (y_plane - y1) / (y2 - y1);
-			float x_intersection = x_data[i] + t * (x_data[i + 1] - x_data[i]);
-			float z_intersection = z_data[i] + t * (z_data[i + 1] - z_data[i]);
-			crossplanepoints.x = x_intersection;
-			crossplanepoints.z = z_intersection;
+		if (x_data[i] < 300 && x_data[i] > -300 && z_data[i] < 1000 && z_data[i] > -30) {
+			float y1 = y_data[i];
+			float y2 = y_data[i + 1];
+
+			if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
+				float t = (y_plane - y1) / (y2 - y1);
+				float x_intersection = x_data[i] + t * (x_data[i + 1] - x_data[i]);
+				float z_intersection = z_data[i] + t * (z_data[i + 1] - z_data[i]);
+				crossplanepoints.x = x_intersection;
+				crossplanepoints.z = z_intersection;
+			}
 		}
+
 	}
 }
 
