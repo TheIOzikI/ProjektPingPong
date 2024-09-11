@@ -229,6 +229,9 @@ struct polyfitPredictionPoints {
 	vector<float> x;
 	vector<float> y;
 	vector<float> z;
+	vector<float> xpred;
+	vector<float> ypred;
+	vector<float> zpred;
 };
 
 //Struktura przechowująca punkty z predykcji sposobem  równań ruchu
