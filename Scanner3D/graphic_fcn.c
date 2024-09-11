@@ -22,6 +22,7 @@ extern EstimatedPoints estimated_point;
 extern CrossPlanePoints crossplanepoints;
 extern polyfitPredictionPoints polyfit_points;
 extern NewtonPoints predicted_points_newton;
+extern RealPlanePoints realplanepoints;
 
 void initGraphics(void)
 {
@@ -517,19 +518,26 @@ void dxRenderFrame(void)
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 200); // pierwszy - szerokość, drugi - wysokość
 
 		wchar_t strikePoint[200];
+		wchar_t realPoint[200];
+		wchar_t distancebetweenpoints[200];
 		if (logicVariables.prediction == 0 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: BRAK", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
 		if (logicVariables.prediction == 1 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Kalman", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
 		if (logicVariables.prediction == 2 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Ap. Wielomianowa", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
 		if (logicVariables.prediction == 3 && g_font2 != nullptr) g_font2->DrawText(NULL, L"Typ predykcji: Równania ruchu", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-		swprintf(strikePoint, 200, L"StrkPoint X: %.1f  Z: %.1f", crossplanepoints.x, crossplanepoints.z);
-		SetRect(&font_rect, 0, 700, 0, 0);
+		swprintf(strikePoint, 200, L"PredStrkPoint X: %.1f  Z: %.1f", crossplanepoints.x, crossplanepoints.z);
+		SetRect(&font_rect, 0, 550, 0, 0);
 		if (g_font != nullptr) g_font->DrawText(NULL, strikePoint, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
 		
-		//trajektoria
+		//trajektoria realplanepoints
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 50); // pierwszy - szerokość, drugi - wysokość
 		if (logicVariables.trajectory == true && g_font2 != nullptr) g_font2->DrawText(NULL, L"Rysowanie trajektorii: ON", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
 		else if (logicVariables.trajectory == false && g_font2 != nullptr) g_font2->DrawText(NULL, L"Rysowanie trajektorii: OFF", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
-
+		swprintf(realPoint, 200, L"RealCrossPoint X: %.1f  Z: %.1f", realplanepoints.x, realplanepoints.z);
+		SetRect(&font_rect, 0, 500, 0, 0);
+		if (g_font != nullptr) g_font->DrawText(NULL, realPoint, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
+		swprintf(distancebetweenpoints, 200, L"Distance: %.1f cm", realplanepoints.distance/10);
+		SetRect(&font_rect, 0, 450, 0, 0);
+		if (g_font != nullptr) g_font->DrawText(NULL, distancebetweenpoints, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
 		//////////////   KOMUNIKATY   //////////////////////
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5), 100); // pierwszy - szerokość, drugi - wysokość
 		if (g_font2 != nullptr) g_font2->DrawText(NULL, L"WIZUALIZACJA 3D", -1, &font_rect, DT_CENTER | DT_NOCLIP | DT_VCENTER, 0xFFFFFF00);

@@ -12,6 +12,7 @@ prevPoints3D prev_points;
 EstimatedPoints estimated_point;
 PredictedPoints predicted_point;
 CrossPlanePoints crossplanepoints;
+RealPlanePoints realplanepoints;
 polyfitPredictionPoints polyfit_points;
 NewtonPoints predicted_points_newton;
 extern Camera cam1, cam2;
@@ -266,23 +267,24 @@ void liveDataProcessing(void*)
 			if(logicVariables.prediction == 1 && prev_points.x.size() > 3){
 				//Kalman filter
 				kalmanPrediction();
-				if (predicted_point.x.size()>0) optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1500.0f);
+				if (predicted_point.x.size()>0) optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1200.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 				}
 			if (logicVariables.prediction == 2 && prev_points.x.size() > 3){
 				//Aproksymacja wielomianowa
 				polyfitPrediction();
-				if (polyfit_points.x.size() > 0) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1500.0f);
+				if (polyfit_points.x.size() > 0) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1200.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
 			if (logicVariables.prediction == 3 && prev_points.x.size() > 3) {
 				//Równania ruchu
 				newtonPrediction();
-				if (predicted_points_newton.x.size() > 0) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1500.0f);
+				if (predicted_points_newton.x.size() > 0) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1200.0f);
 				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 			}
-
-			odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
+			if (prev_points.x.size()>0) realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1200.0f);
+			distanceBetweenPoints(crossplanepoints.x,crossplanepoints.z,realplanepoints.x, realplanepoints.z);
+			if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -626,7 +628,7 @@ void listBall3dPositions() {
 void kalmanPrediction() {
 	float g = 9.8;
 	int n = prev_points.x.size();  // Liczba pomiarów
-	int n_future = 40;  // liczba kroków do przodu
+	int n_future = PREDICTION_TIME * dT / 1000;  // liczba kroków do przodu
 
 	estimated_point.x.clear();
 	estimated_point.y.clear();
@@ -739,29 +741,7 @@ void kalmanPrediction() {
 
 // Funkcja do dopasowania wielomianu oraz przewidywania wartoœci
 void polyfitPrediction() {
-	
-	int degree = 3;
-
-	int n = prev_points.x.size();
-
-	MatrixXf A(n, degree + 1);
-	VectorXf b_x(n), b_y(n), b_z(n);
-
-	for (int i = 0; i < n; ++i) {
-		for (int j = 0; j <= degree; ++j) {
-			A(i, j) = pow(i + 1, j);
-		}
-		b_x(i) = prev_points.x[i];
-		b_y(i) = prev_points.y[i];
-		b_z(i) = prev_points.z[i];
-	}
-
-	// Obliczanie wspó³czynników wielomianów
-	VectorXf p_x = A.colPivHouseholderQr().solve(b_x);
-	VectorXf p_y = A.colPivHouseholderQr().solve(b_y);
-	VectorXf p_z = A.colPivHouseholderQr().solve(b_z);
-
-	// czyszczenie tablic
+	// Czyszczenie tablic
 	polyfit_points.x.clear();
 	polyfit_points.y.clear();
 	polyfit_points.z.clear();
@@ -769,42 +749,82 @@ void polyfitPrediction() {
 	polyfit_points.y.shrink_to_fit();
 	polyfit_points.z.shrink_to_fit();
 
-	// Przewidywanie wartoœci dla istniej¹cych punktów
-	for (int i = 0; i < n; ++i) {
-		float pred_x = 0, pred_y = 0, pred_z = 0;
-		for (int j = 0; j <= degree; ++j) {
-			pred_x += p_x(j) * pow(i + 1, j);
-			pred_y += p_y(j) * pow(i + 1, j);
-			pred_z += p_z(j) * pow(i + 1, j);
+	int degree = 3;
+	int future_points = PREDICTION_TIME * dT / 1000;  // liczba kroków do przodu
+
+	vector<int> segment_start_indices;
+	segment_start_indices.push_back(0);  // Zaczynamy od pocz¹tku
+
+	// Wykrywanie przerw, gdy z < 20
+	for (int i = 1; i < prev_points.z.size(); ++i) {
+		if (prev_points.z[i] >= 100 && prev_points.z[i - 1] < 100) {
+			segment_start_indices.push_back(i);  // Nowy segment
 		}
-		polyfit_points.x.push_back(pred_x);
-		polyfit_points.y.push_back(pred_y);
-		polyfit_points.z.push_back(pred_z);
 	}
+	segment_start_indices.push_back(prev_points.z.size());  // Zakoñczenie na koñcu danych
 
-	// Przewidywanie przysz³ych wartoœci
+	// Przetwarzanie ka¿dego segmentu osobno
+	for (int seg = 0; seg < segment_start_indices.size() - 1; ++seg) {
+		int start_idx = segment_start_indices[seg];
+		int end_idx = segment_start_indices[seg + 1];
 
-	int future_points = round(DT * PREDICTION_TIME);  // liczba kroków do przodu
+		int n = end_idx - start_idx;
+		MatrixXf A(n, degree + 1);
+		VectorXf b_x(n), b_y(n), b_z(n);
 
-	for (int i = n; i < n + future_points; ++i) {
-		float pred_x = 0, pred_y = 0, pred_z = 0;
-		for (int j = 0; j <= degree; ++j) {
-			
-			pred_x += p_x(j) * pow(i + 1, j);
-			pred_y += p_y(j) * pow(i + 1, j);
-			pred_z += p_z(j) * pow(i + 1, j);
+		// Budowanie macierzy A i wektorów b dla bie¿¹cego segmentu
+		for (int i = 0; i < n; ++i) {
+			for (int j = 0; j <= degree; ++j) {
+				A(i, j) = pow(i + 1, j);
+			}
+			b_x(i) = prev_points.x[start_idx + i];
+			b_y(i) = prev_points.y[start_idx + i];
+			b_z(i) = prev_points.z[start_idx + i];
 		}
-		polyfit_points.x.push_back(pred_x);
-		polyfit_points.y.push_back(pred_y);
-		polyfit_points.z.push_back(pred_z);
+
+		// Obliczanie wspó³czynników wielomianów dla bie¿¹cego segmentu
+		VectorXf p_x = A.colPivHouseholderQr().solve(b_x);
+		VectorXf p_y = A.colPivHouseholderQr().solve(b_y);
+		VectorXf p_z = A.colPivHouseholderQr().solve(b_z);
+
+		// Przewidywanie wartoœci dla bie¿¹cego segmentu
+		for (int i = 0; i < n; ++i) {
+			float pred_x = 0, pred_y = 0, pred_z = 0;
+			for (int j = 0; j <= degree; ++j) {
+				pred_x += p_x(j) * pow(i + 1, j);
+				pred_y += p_y(j) * pow(i + 1, j);
+				pred_z += p_z(j) * pow(i + 1, j);
+			}
+			// Dodaj przewidywane wartoœci do polyfit_points
+			polyfit_points.x.push_back(pred_x);
+			polyfit_points.y.push_back(pred_y);
+			polyfit_points.z.push_back(pred_z);
+		}
+
+		// Przewidywanie przysz³ych wartoœci dla bie¿¹cego segmentu
+		for (int i = n; i < n + future_points; ++i) {
+			float pred_x = 0, pred_y = 0, pred_z = 0;
+			for (int j = 0; j <= degree; ++j) {
+				// U¿ywamy i - n + 1, aby przewidywaæ przysz³e wartoœci
+				pred_x += p_x(j) * pow(i - n + 1, j);
+				pred_y += p_y(j) * pow(i - n + 1, j);
+				pred_z += p_z(j) * pow(i - n + 1, j);
+			}
+			// Dodaj przewidywane przysz³e wartoœci do polyfit_points
+			polyfit_points.x.push_back(pred_x);
+			polyfit_points.y.push_back(pred_y);
+			polyfit_points.z.push_back(pred_z);
+		}
 	}
 }
 
 void newtonPrediction() {
+	double dt = dT / 1000;
 	int n = prev_points.x.size();
-	int n_future = 10;//dT * PREDICTION_TIME;
+	int n_future = PREDICTION_TIME * dT/1000;
 	//odprintf("[Info]size of x	%i %i	\n", n, n_future);
 	
+
 	//czyszczenie struktury przed dodaniem
 	if (predicted_points_newton.x.size() > 1) {
 		predicted_points_newton.x.clear();
@@ -815,96 +835,44 @@ void newtonPrediction() {
 		predicted_points_newton.z.shrink_to_fit();
 	}
 
-	// Obliczanie prêdkoœci (vx, vy, vz)
-	vector<float> vx(n - 1), vy(n - 1), vz(n - 1);
-	for (size_t i = 0; i < n - 1; ++i) {
-		vx[i] = (prev_points.x[i + 1] - prev_points.x[i]) / DT;
-		vy[i] = (prev_points.y[i + 1] - prev_points.y[i]) / DT;
-		vz[i] = (prev_points.z[i + 1] - prev_points.z[i]) / DT;
-		//odprintf("[info]speed	%f	%f	%f	\n", vz[i],vy[i],vz[i]);
+	vector<float> vx, vy, vz, ax, ay, az;
+
+	for (size_t i = 1; i < prev_points.x.size(); ++i) {
+		vx.push_back((prev_points.x[i] - prev_points.x[i - 1]) / dt);
+		vy.push_back((prev_points.y[i] - prev_points.y[i - 1]) / dt);
+		vz.push_back((prev_points.z[i] - prev_points.z[i - 1]) / dt);
 	}
 
-	// Obliczanie przyspieszenia (ax, ay, az)
-	vector<float> ax(n - 2), ay(n - 2), az(n - 2);
-	for (size_t i = 0; i < n - 2; ++i) {
-		ax[i] = (vx[i + 1] - vx[i]) / DT;
-		ay[i] = (vy[i + 1] - vy[i]) / DT;
-		az[i] = (vz[i + 1] - vz[i]) / DT;
-		//odprintf("[info]acceleration	%f	%f	%f	\n", az[i], ay[i], az[i]);
+	for (size_t i = 1; i < vx.size(); ++i) {
+		ax.push_back((vx[i] - vx[i - 1]) / dt);
+		ay.push_back((vy[i] - vy[i - 1]) / dt);
+		az.push_back((vz[i] - vz[i - 1]) / dt);
 	}
-	//do tej pory dzia³a potem crash
-	// Predykcja kolejnych punktów
-	for (int i = 0; i < n_future; ++i) {
-		float t_pred = i + 1; // Przewidywanie dla ka¿dego kolejnego kroku czasu
-		float x_pred = prev_points.x[n - 1] + t_pred * vx.back() + 0.5f * ax.back() * t_pred * t_pred;
-		float y_pred = prev_points.y[n - 1] + t_pred * vy.back() + 0.5f * ay.back() * t_pred * t_pred;
-		float z_pred = prev_points.z[n - 1] + t_pred * vz.back() + 0.5f * az.back() * t_pred * t_pred;
 
+	// Predykcja kolejnych pozycji na podstawie ostatniej prêdkoœci i przyspieszenia
+	int n_pred = 10; // Liczba przewidywanych punktów
+	vector<float> x_pred(n_pred, 0), y_pred(n_pred, 0), z_pred(n_pred, 0);
 
+	x_pred[0] = prev_points.x.back();
+	y_pred[0] = prev_points.y.back();
+	z_pred[0] = prev_points.z.back();
+
+	// Symulacja trajektorii z wykrywaniem odbicia dla z = 0
+	for (int t_pred = 1; t_pred < n_pred; ++t_pred) {
+		// Predykcja nowych pozycji
+		x_pred[t_pred] = x_pred[t_pred - 1] + vx.back() * dt + 0.5 * ax.back() * dt * dt;
+		y_pred[t_pred] = y_pred[t_pred - 1] + vy.back() * dt + 0.5 * ay.back() * dt * dt;
+		z_pred[t_pred] = z_pred[t_pred - 1] + vz.back() * dt + 0.5 * az.back() * dt * dt;
+
+		// Wykrywanie odbicia w osi Z (gdy z osi¹ga 0)
+		//if (z_pred[t_pred] < 0) {
+		//	z_pred[t_pred] = -z_pred[t_pred];  // Symulacja odbicia
+		//	vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci z t³umieniem
+		//}
 		//dodawanie
-		predicted_points_newton.x.push_back(x_pred);
-		predicted_points_newton.y.push_back(y_pred);
-		predicted_points_newton.z.push_back(z_pred);
-
-		//// Wykrywanie odbicia
-		if (z_pred < 0) {
-			z_pred = -z_pred;  // Symulacja odbicia
-			vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci vz
-		}
-	}
-}
-
-//Optymalne miejsce odbicia dla Klamana z podwójnego wektora
-void optimalStrikePointKalman(vector<vector<float>>& x_data, vector<vector<float>>& y_data, vector<vector<float>>& z_data, int k_size, int j_size, float y_plane, float max_distance) {
-	vector<CrossPlanePoints> intersections;
-
-	for (int k = 0; k < k_size; ++k) {
-		for (int j = 0; j < j_size - 1; ++j) {
-			
-			float y1 = y_data[k][j];
-			float y2 = y_data[k][j + 1];
-
-			if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
-				
-				float t = (y_plane - y1) / (y2 - y1);
-				float x_intersection = x_data[k][j] + t * (x_data[k][j + 1] - x_data[k][j]);
-				float z_intersection = z_data[k][j] + t * (z_data[k][j + 1] - z_data[k][j]);
-
-				intersections.push_back({ 0.0f, x_intersection, z_intersection });
-			}
-		}
-	}
-
-	float total_distance = 0.0f;
-	int count = 0;
-	float sum_x = 0.0f;
-	float sum_z = 0.0f;
-
-	for (size_t i = 0; i < intersections.size(); ++i) {
-		for (size_t j = i + 1; j < intersections.size(); ++j) {
-			
-			float dx = intersections[i].x - intersections[j].x;
-			float dz = intersections[i].z - intersections[j].z;
-			float distance = sqrt(dx * dx + dz * dz);
-
-			if (distance <= max_distance) {
-				
-				total_distance += distance;
-				sum_x += (intersections[i].x + intersections[j].x) / 2;
-				sum_z += (intersections[i].z + intersections[j].z) / 2;
-				++count;
-			}
-		}
-	}
-
-	crossplanepoints.average_distance = (count > 0) ? (total_distance / count) : 0.0f;
-	if (count > 0) {
-		crossplanepoints.x = sum_x / count;
-		crossplanepoints.z = sum_z / count;
-	}
-	else {
-		crossplanepoints.x = 0.0f;
-		crossplanepoints.z = 0.0f;
+		predicted_points_newton.x.push_back(x_pred[t_pred]);
+		predicted_points_newton.y.push_back(y_pred[t_pred]);
+		predicted_points_newton.z.push_back(z_pred[t_pred]);
 	}
 }
 
@@ -915,7 +883,7 @@ void optimalStrikePointOther(vector<float>& x_data, vector<float>& y_data, vecto
 
 	// Znajdujemy przeciêcia dla pojedynczego wektora punktów
 	for (int i = 0; i < size - 1; ++i) {
-		if (x_data[i] < 300 && x_data[i] > -300 && z_data[i] < 1000 && z_data[i] > -30) {
+		if (x_data[i] < 1000 && x_data[i] > -1000 && z_data[i] < 700 && z_data[i] > -30) {
 			float y1 = y_data[i];
 			float y2 = y_data[i + 1];
 
@@ -929,6 +897,31 @@ void optimalStrikePointOther(vector<float>& x_data, vector<float>& y_data, vecto
 		}
 
 	}
+}
+//realna pozycja przeciêcia z y 
+void realStrikePointOther(vector<float>& x_data, vector<float>& y_data, vector<float>& z_data, float y_plane) {
+
+	for (int i = 0; i < x_data.size() - 1; ++i) {
+		if (x_data[i] < 1000 && x_data[i] > -1000 && z_data[i] < 700 && z_data[i] > -30) {
+			float y1 = y_data[i];
+			float y2 = y_data[i + 1];
+
+			if ((y1 - y_plane) * (y2 - y_plane) <= 0 && y1 != y2) {
+				float t = (y_plane - y1) / (y2 - y1);
+				float x_intersection = x_data[i] + t * (x_data[i + 1] - x_data[i]);
+				float z_intersection = z_data[i] + t * (z_data[i + 1] - z_data[i]);
+				realplanepoints.x = x_intersection;
+				realplanepoints.z = z_intersection;
+			}
+		}
+
+	}
+}
+
+void distanceBetweenPoints(float&x1, float& z1, float& x2, float& z2) {
+	float dx = x1 - x2;
+	float dz = z1 - z2;
+	realplanepoints.distance = sqrt(dx * dx + dz * dz);
 }
 
 void cleanBorder(Mat& img) {
