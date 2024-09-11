@@ -1,6 +1,6 @@
+#include "graphic_fcn.h"
 #include "main.h"
 #include "main_threads.h"
-#include "graphic_fcn.h"
 #include "print_fcn.h"
 
 
@@ -30,7 +30,7 @@ void liveFeed(void* param)
 	uint64 ctx;
 	uint8 i = 0, localstrm, fot_num_1 = 0, fot_num_2 = 0;
 	Mat mask_low, mask_high, binImg, calibImg;
-	vector<Point2f> distorted_points(56), undistorted_points(56);
+	vector<Point2f> distorted_points(23), undistorted_points(23);
 	bool isReady;
 	int fontFace = FONT_HERSHEY_DUPLEX;
 	float dTcam = 0.0, pix2 = 0.0, average_brightness = 0.0;
@@ -87,27 +87,27 @@ void liveFeed(void* param)
 		if (localstrm == 2) {
 
 			// czyszczenie struktur dla markerow
-			memset(cam->coded_markers, 0, 56 * sizeof * cam->coded_markers);
+			memset(cam->coded_markers, 0, 23 * sizeof * cam->coded_markers);
 
 			// przepisanie z bufora do Mat'a
 			pylonImageToCvMat(cam->buffer, CAM_WIDTH, CAM_HEIGHT, cam->grayImg);
 
 			// detekcja markerow (dziala tylko gdy kalibracja)
-			if(logicVariables.marker == true) findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
+			if (logicVariables.marker == true) findMarkers(cam->grayImg, binImg, cam->coded_markers, 0, logicVariables.imdisp, logicVariables.mkr_color);
 
 			// szukanie pileczki (dziala zawsze gdy nie trwa kalibracja)
 			findBall(cam->grayImg, cam->colorImg, cam->coded_markers);
-			
+
 			//undistort points
-				if (cam->coded_markers[0].isSet) {
-					distorted_points[0].x = cam->coded_markers[0].x;
-					distorted_points[0].y = cam->coded_markers[0].y;
-				}
+			if (cam->coded_markers[0].isSet) {
+				distorted_points[0].x = cam->coded_markers[0].x;
+				distorted_points[0].y = cam->coded_markers[0].y;
+			}
 			undistorted_points = undistortPointsMG(cam, distorted_points);
-				if (cam->coded_markers[0].isSet) {
-					cam->coded_markers[0].x = undistorted_points[0].x;
-					cam->coded_markers[0].y = undistorted_points[0].y;
-				}
+			if (cam->coded_markers[0].isSet) {
+				cam->coded_markers[0].x = undistorted_points[0].x;
+				cam->coded_markers[0].y = undistorted_points[0].y;
+			}
 
 			// kopiowanie do obrazka RGB
 			cvtColor(cam->grayImg, cam->colorImg, COLOR_GRAY2BGR);
@@ -137,8 +137,8 @@ void liveFeed(void* param)
 
 			if (!cam->mk_lock) { // gdy zapis odblokowany
 				if (logicVariables.auto_exp) cam->br_max_buff = cam->br_max; // dla regulatora w trzecim watku
-				memset(cam->coded_markers_buff, 0, 56 * sizeof * cam->coded_markers);
-				for (i = 0; i < 56; i++) {
+				memset(cam->coded_markers_buff, 0, 23 * sizeof * cam->coded_markers);
+				for (i = 0; i < 23; i++) {
 					if (cam->coded_markers[i].isSet) {
 						// kopiowanie do bufora, zeby nie blokowac nowego zapisu gdy bedzie odczyt z liveDataProcessing
 						cam->coded_markers_buff[i].isSet = cam->coded_markers[i].isSet;
@@ -146,7 +146,7 @@ void liveFeed(void* param)
 						cam->coded_markers_buff[i].x = cam->coded_markers[i].x;
 						cam->coded_markers_buff[i].y = cam->coded_markers[i].y;
 					}
-					if (i == 55) {
+					if (i == 22) {
 						EnterCriticalSection(&cs2);
 						cam->mk_lock = true; // blokuje zapis do bufora
 						LeaveCriticalSection(&cs2);
@@ -156,7 +156,7 @@ void liveFeed(void* param)
 			}
 
 			// wydruk wszystkich znalezionych markerow
-			for (i = 0; i < 56; i++) {
+			for (i = 0; i < 23; i++) {
 				if (cam->coded_markers[i].isSet) {
 					circle(cam->colorImg, Point((int)cam->coded_markers[i].x, (int)cam->coded_markers[i].y), 30, Scalar(0, 255, 0, 0));
 					if (cam->coded_markers[i].y < CAM_HEIGHT / 2)
@@ -194,6 +194,8 @@ void liveFeed(void* param)
 			}
 			else {
 				putText(cam->colorImg, "CAM 2 - RIGHT", Point((int)(CAM_WIDTH) / 2 - 930, 80), fontFace, fontScale, Scalar(255, 255, 0), 2);
+				putText(cam->colorImg, "fps:", Point(40, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
+				putText(cam->colorImg, toStringWithPrecision(1 / dTcam, 1), Point(330, 230), fontFace, fontScale, Scalar(255, 255, 255), 2);
 			}
 			imshow(cam->window, cam->colorImg); // wyswietlenie obrazu
 		}
@@ -232,13 +234,11 @@ void liveDataProcessing(void*)
 	odprintf("\n[Info] Starting liveDataProcessing\n\n");
 
 	unsigned int loop = 0;
-	int li2 = 0;
-	uint32 last_pts_print_step = 0;
 	clock_t begin1, end1, begin2, end2;
 
 	// set up and initialize Direct3D
 	dxInit(appWindows.panel3D);
-	
+
 	while (!logicVariables.stop_exe) {
 		begin1 = clock();
 		begin2 = clock();
@@ -264,27 +264,65 @@ void liveDataProcessing(void*)
 			listBall3dPositions();
 
 			//metody predykcji
-			if(logicVariables.prediction == 1 && prev_points.x.size() > 3){
-				//Kalman filter
-				kalmanPrediction();
-				if (predicted_point.x.size()>0) optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1000.0f);
-				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+			switch (logicVariables.prediction) {
+			case 1:
+				if (prev_points.x.size() > 3) {
+					// Kalman filter
+					kalmanPrediction();
+					if (predicted_point.x.size() > 0) {
+						optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1000.0f);
+					}
 				}
-			if (logicVariables.prediction == 2 && prev_points.x.size() > 3){
-				//Aproksymacja wielomianowa
-				polyfitPrediction();
-				if (polyfit_points.x.size() > 0) optimalStrikePointOther(polyfit_points.xpred, polyfit_points.ypred, polyfit_points.zpred, 1000.0f);
-				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+				break;
+
+			case 2:
+				if (prev_points.x.size() > 3) {
+					// Aproksymacja wielomianowa
+					polyfitPrediction();
+					if (polyfit_points.x.size() > 0) {
+						optimalStrikePointOther(polyfit_points.xpred, polyfit_points.ypred, polyfit_points.zpred, 1000.0f);
+					}
+				}
+				break;
+
+			case 3:
+				if (prev_points.x.size() > 3) {
+					// Równania ruchu
+					newtonPrediction();
+					if (predicted_points_newton.x.size() > 0) {
+						optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1000.0f);
+					}
+				}
+				break;
+
+			default:
+				prev_points.x.shrink_to_fit();
+				prev_points.y.shrink_to_fit();
+				prev_points.z.shrink_to_fit();
+				estimated_point.x.shrink_to_fit();
+				estimated_point.y.shrink_to_fit();
+				estimated_point.z.shrink_to_fit();
+				predicted_point.x.shrink_to_fit();
+				predicted_point.y.shrink_to_fit();
+				predicted_point.z.shrink_to_fit();
+				polyfit_points.x.shrink_to_fit();
+				polyfit_points.y.shrink_to_fit();
+				polyfit_points.z.shrink_to_fit();
+				polyfit_points.xpred.shrink_to_fit();
+				polyfit_points.ypred.shrink_to_fit();
+				polyfit_points.zpred.shrink_to_fit();
+				predicted_points_newton.x.shrink_to_fit();
+				predicted_points_newton.y.shrink_to_fit();
+				predicted_points_newton.z.shrink_to_fit();
+
+				break;
 			}
-			if (logicVariables.prediction == 3 && prev_points.x.size() > 3) {
-				//Równania ruchu
-				newtonPrediction();
-				if (predicted_points_newton.x.size() > 0) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1000.0f);
-				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+
+			if (prev_points.x.size() > 0) {
+				realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1000.0f);
+				distanceBetweenPoints(crossplanepoints.x, crossplanepoints.z, realplanepoints.x, realplanepoints.z);
 			}
-			if (prev_points.x.size()>0) realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1000.0f);
-			distanceBetweenPoints(crossplanepoints.x,crossplanepoints.z,realplanepoints.x, realplanepoints.z);
-			if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
+			//if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -295,12 +333,6 @@ void liveDataProcessing(void*)
 		// generowanie sceny 3D
 		dxRenderFrame();
 
-		//:: zwolniony wydruk czegokolwiek :://
-		li2++;
-		if (li2 == 10) {
-			//...
-			li2 = 0;
-		}
 		end2 = clock();
 		loop = (uint)abs(DT - 1000.0 * (((double)end2 - (double)begin2) / CLOCKS_PER_SEC));
 		// pozosta³y czas wolny
@@ -362,12 +394,12 @@ void reconstructMarkers3D(void)
 	}
 	Rl[15] = 1.0; Rr[15] = 1.0;
 
-	plmk = (pPoint4)_aligned_malloc(sizeof(Point4) * 56, 16);
-	prmk = (pPoint4)_aligned_malloc(sizeof(Point4) * 56, 16);
+	plmk = (pPoint4)_aligned_malloc(sizeof(Point4) * 23, 16);
+	prmk = (pPoint4)_aligned_malloc(sizeof(Point4) * 23, 16);
 
 	if (plmk != NULL && prmk != NULL) {
-		vr1 = (pPoint4)_aligned_malloc(sizeof(Point4) * 56, 16);
-		vr3 = (pPoint4)_aligned_malloc(sizeof(Point4) * 56, 16);
+		vr1 = (pPoint4)_aligned_malloc(sizeof(Point4) * 23, 16);
+		vr3 = (pPoint4)_aligned_malloc(sizeof(Point4) * 23, 16);
 
 		// przepisanie pozycji tylko tych markerow (kodowanych), ktore sa jednoczesnie widoczne na obu obrazkach
 		for (k = 0; k < 23; k++) {
@@ -401,8 +433,8 @@ void reconstructMarkers3D(void)
 		M4x4_SSE(Rl, cam1.Ainv, RAinvL);
 		M4x4_SSE(Rr, cam2.Ainv, RAinvR);
 
-		M4x1NS_SSE(RAinvL, plmk[0].raw, vr1[0].raw, 56);
-		M4x1NS_SSE(RAinvR, prmk[0].raw, vr3[0].raw, 56);
+		M4x1NS_SSE(RAinvL, plmk[0].raw, vr1[0].raw, 23);
+		M4x1NS_SSE(RAinvR, prmk[0].raw, vr3[0].raw, 23);
 
 		// T0 = TC1-TC2
 		t0[0] = cam1.RT[3] - cam2.RT[3];
@@ -586,7 +618,7 @@ void findBall(Mat& grayImg, Mat& colorImg, Marker* coded_markers) {
 	{
 		coded_markers[0].isSet = false;
 	}
-	
+
 
 	// Rysowanie rzeczywistej pozycji pi³eczki na obrazie kolorowym
 	if (ballDetected) {
@@ -612,14 +644,11 @@ void listBall3dPositions() {
 		//odprintf("[Info] Ball not seen %i \n", prev_points.cycles);
 	}
 	//kasowanie trajektorii 
-	if(prev_points.cycles >= 200) {
+	if (prev_points.cycles >= PREDICTION_TIME * 1 / dT) {
 		// wyczyszczenie wszystkich wektorów
 		prev_points.x.clear();
 		prev_points.y.clear();
 		prev_points.z.clear();
-		prev_points.x.shrink_to_fit();
-		prev_points.y.shrink_to_fit();
-		prev_points.z.shrink_to_fit();
 		prev_points.cycles = 0;
 		odprintf("[Info] Trajectory points reset\n");
 	}
@@ -628,20 +657,14 @@ void listBall3dPositions() {
 void kalmanPrediction() {
 	float g = 9.8;
 	int n = prev_points.x.size();  // Liczba pomiarów
-	int n_future = PREDICTION_TIME * dT / 1000;  // liczba kroków do przodu
+	int n_future = PREDICTION_TIME * 1 / dT;  // liczba kroków do przodu
 
 	estimated_point.x.clear();
 	estimated_point.y.clear();
 	estimated_point.z.clear();
-	estimated_point.x.shrink_to_fit();
-	estimated_point.y.shrink_to_fit();
-	estimated_point.z.shrink_to_fit();
 	predicted_point.x.clear();
 	predicted_point.y.clear();
 	predicted_point.z.clear();
-	predicted_point.x.shrink_to_fit();
-	predicted_point.y.shrink_to_fit();
-	predicted_point.z.shrink_to_fit();
 
 	// Inicjalizacja wektora stanu [px, py, pz, vx, vy, vz, ax, ay, az]
 	VectorXf x(9);
@@ -649,19 +672,19 @@ void kalmanPrediction() {
 
 	// Macierz przejœcia stanu A
 	MatrixXf A(9, 9);
-	A << 1, 0, 0, DT, 0, 0, 0.5 * DT * DT, 0, 0,
-		0, 1, 0, 0, DT, 0, 0, 0.5 * DT * DT, 0,
-		0, 0, 1, 0, 0, DT, 0, 0, 0.5 * DT * DT,
-		0, 0, 0, 1, 0, 0, DT, 0, 0,
-		0, 0, 0, 0, 1, 0, 0, DT, 0,
-		0, 0, 0, 0, 0, 1, 0, 0, DT,
+	A << 1, 0, 0, dT, 0, 0, 0.5 * dT * dT, 0, 0,
+		0, 1, 0, 0, dT, 0, 0, 0.5 * dT * dT, 0,
+		0, 0, 1, 0, 0, dT, 0, 0, 0.5 * dT * dT,
+		0, 0, 0, 1, 0, 0, dT, 0, 0,
+		0, 0, 0, 0, 1, 0, 0, dT, 0,
+		0, 0, 0, 0, 0, 1, 0, 0, dT,
 		0, 0, 0, 0, 0, 0, 1, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 1, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 1;
 
 	// Macierz kontrolna B (grawitacja)
 	VectorXf B(9);
-	B << 0, 0, -0.5 * DT * DT * g, 0, 0, -DT * g, 0, 0, 0;
+	B << 0, 0, -0.5 * dT * dT * g, 0, 0, -dT * g, 0, 0, 0;
 
 	// Macierz pomiaru H (pomiar tylko pozycji)
 	MatrixXf H(3, 9);
@@ -697,7 +720,7 @@ void kalmanPrediction() {
 		P = (MatrixXf::Identity(9, 9) - K * H) * P;
 
 		// Sprawdzenie odbicia
-		if (x(2) <= 0) {
+		if (x(2) <= BOUNCE_HEIGHT) {
 			x(2) = 0;
 			x(5) = -x(5) * BOUNCE_FACTOR;
 		}
@@ -715,7 +738,7 @@ void kalmanPrediction() {
 			x_future = A * x_future;
 
 			// Sprawdzenie odbicia w prognozie
-			if (x_future(2) <= 0) {
+			if (x_future(2) <= BOUNCE_HEIGHT) {
 				x_future(2) = 0;
 				x_future(5) = -x_future(5) * BOUNCE_FACTOR;
 			}
@@ -725,15 +748,10 @@ void kalmanPrediction() {
 			predicted_point.x.clear();
 			predicted_point.y.clear();
 			predicted_point.z.clear();
-			predicted_point.x.shrink_to_fit();
-			predicted_point.y.shrink_to_fit();
-			predicted_point.z.shrink_to_fit();
 
 			predicted_point.x.push_back(x_future(0));
 			predicted_point.y.push_back(x_future(1));
 			predicted_point.z.push_back(x_future(2));
-
-
 
 		}
 	}
@@ -745,19 +763,16 @@ void polyfitPrediction() {
 	polyfit_points.x.clear();
 	polyfit_points.y.clear();
 	polyfit_points.z.clear();
-	polyfit_points.x.shrink_to_fit();
-	polyfit_points.y.shrink_to_fit();
-	polyfit_points.z.shrink_to_fit();
 
 	int degree = 3;
-	int future_points = PREDICTION_TIME * 10;  // liczba kroków do przodu
+	int future_points = PREDICTION_TIME * 1 / dT;  // liczba kroków do przodu
 
 	vector<int> segment_start_indices;
 	segment_start_indices.push_back(0);  // Zaczynamy od pocz¹tku
 
-	// Wykrywanie przerw, gdy z < 20
+	// Wykrywanie przerw, gdy z < BOUNCE_HEIGHT
 	for (int i = 1; i < prev_points.z.size(); ++i) {
-		if (prev_points.z[i] >= 100 && prev_points.z[i - 1] < 100) {
+		if (prev_points.z[i] >= BOUNCE_HEIGHT && prev_points.z[i - 1] < BOUNCE_HEIGHT) {
 			segment_start_indices.push_back(i);  // Nowy segment
 		}
 	}
@@ -812,9 +827,7 @@ void polyfitPrediction() {
 		polyfit_points.xpred.clear();
 		polyfit_points.ypred.clear();
 		polyfit_points.zpred.clear();
-		polyfit_points.xpred.shrink_to_fit();
-		polyfit_points.ypred.shrink_to_fit();
-		polyfit_points.zpred.shrink_to_fit();
+
 
 		// Przewidywanie przysz³ych wartoœci dla bie¿¹cego segmentu
 		for (int i = 0; i < future_points; ++i) {
@@ -833,34 +846,31 @@ void polyfitPrediction() {
 }
 
 void newtonPrediction() {
-	double dt = dT / 1000;
 	int n = prev_points.x.size();
-	int n_future = PREDICTION_TIME * dT/1000;
+	int n_future = PREDICTION_TIME * 1 / dT;
 	//odprintf("[Info]size of x	%i %i	\n", n, n_future);
-	
+
 
 	//czyszczenie struktury przed dodaniem
 	if (predicted_points_newton.x.size() > 1) {
 		predicted_points_newton.x.clear();
 		predicted_points_newton.y.clear();
 		predicted_points_newton.z.clear();
-		predicted_points_newton.x.shrink_to_fit();
-		predicted_points_newton.y.shrink_to_fit();
-		predicted_points_newton.z.shrink_to_fit();
+
 	}
 
 	vector<float> vx, vy, vz, ax, ay, az;
 
 	for (size_t i = 1; i < prev_points.x.size(); ++i) {
-		vx.push_back((prev_points.x[i] - prev_points.x[i - 1]) / dt);
-		vy.push_back((prev_points.y[i] - prev_points.y[i - 1]) / dt);
-		vz.push_back((prev_points.z[i] - prev_points.z[i - 1]) / dt);
+		vx.push_back((prev_points.x[i] - prev_points.x[i - 1]) / dT);
+		vy.push_back((prev_points.y[i] - prev_points.y[i - 1]) / dT);
+		vz.push_back((prev_points.z[i] - prev_points.z[i - 1]) / dT);
 	}
 
 	for (size_t i = 1; i < vx.size(); ++i) {
-		ax.push_back((vx[i] - vx[i - 1]) / dt);
-		ay.push_back((vy[i] - vy[i - 1]) / dt);
-		az.push_back((vz[i] - vz[i - 1]) / dt);
+		ax.push_back((vx[i] - vx[i - 1]) / dT);
+		ay.push_back((vy[i] - vy[i - 1]) / dT);
+		az.push_back((vz[i] - vz[i - 1]) / dT);
 	}
 
 	// Predykcja kolejnych pozycji na podstawie ostatniej prêdkoœci i przyspieszenia
@@ -874,15 +884,15 @@ void newtonPrediction() {
 	// Symulacja trajektorii z wykrywaniem odbicia dla z = 0
 	for (int t_pred = 1; t_pred < n_pred; ++t_pred) {
 		// Predykcja nowych pozycji
-		x_pred[t_pred] = x_pred[t_pred - 1] + vx.back() * dt + 0.5 * ax.back() * dt * dt;
-		y_pred[t_pred] = y_pred[t_pred - 1] + vy.back() * dt + 0.5 * ay.back() * dt * dt;
-		z_pred[t_pred] = z_pred[t_pred - 1] + vz.back() * dt + 0.5 * az.back() * dt * dt;
+		x_pred[t_pred] = x_pred[t_pred - 1] + vx.back() * dT + 0.5 * ax.back() * dT * dT;
+		y_pred[t_pred] = y_pred[t_pred - 1] + vy.back() * dT + 0.5 * ay.back() * dT * dT;
+		z_pred[t_pred] = z_pred[t_pred - 1] + vz.back() * dT + 0.5 * az.back() * dT * dT;
 
 		// Wykrywanie odbicia w osi Z (gdy z osi¹ga 0)
-		//if (z_pred[t_pred] < 0) {
-		//	z_pred[t_pred] = -z_pred[t_pred];  // Symulacja odbicia
-		//	vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci z t³umieniem
-		//}
+		if (z_pred[t_pred] < BOUNCE_HEIGHT) {
+			z_pred[t_pred] = -z_pred[t_pred];  // Symulacja odbicia
+			vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci z t³umieniem
+		}
 		//dodawanie
 		predicted_points_newton.x.push_back(x_pred[t_pred]);
 		predicted_points_newton.y.push_back(y_pred[t_pred]);
@@ -932,7 +942,7 @@ void realStrikePointOther(vector<float>& x_data, vector<float>& y_data, vector<f
 	}
 }
 
-void distanceBetweenPoints(float&x1, float& z1, float& x2, float& z2) {
+void distanceBetweenPoints(float& x1, float& z1, float& x2, float& z2) {
 	float dx = x1 - x2;
 	float dz = z1 - z2;
 	realplanepoints.distance = sqrt(dx * dx + dz * dz);

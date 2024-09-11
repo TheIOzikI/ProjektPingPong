@@ -11,6 +11,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/core/cuda.hpp>
 #include <commctrl.h> // wykorzystane do trackbara
 #include <crtdefs.h>
 #include <process.h>
@@ -19,6 +20,7 @@
 #include <cmath>
 
 using namespace cv;
+using namespace cv::cuda;
 using namespace std;
 using namespace Eigen;
 
@@ -62,12 +64,16 @@ typedef unsigned long long	uint64;
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
 
 //////////zmienione na logicvariable guziki
-//#define DT					100.0f // 80 [ms] czas trwania petli w watku glównym 25FPS
-#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
-//#define DT					16.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
-//#define DT					(1/40*1000)f //60fps
+
+//#define DT					40.0f // 40 [ms] czas trwania petli w watku glównym 25FPS
+//#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
+//#define DT					16.6f // 16.(6) [ms] czas trwania petli w watku glównym 60FPS
+#define DT					10.0f // 10 [ms] czas trwania petli w watku glównym 100FPS
+
+//prediction parameters
 #define PREDICTION_TIME		5 //ile sekund wyprzedzić predykcje
-#define BOUNCE_FACTOR		0.8 //tłumienie wektora w odbiciu
+#define BOUNCE_FACTOR		0.8f //tłumienie wektora w odbiciu
+#define BOUNCE_HEIGHT		50.0f // wysokość wykrycia odbicia
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
@@ -87,7 +93,7 @@ typedef unsigned long long	uint64;
 #define MIN_RECT_RATIO		0.7/1.0
 #define MAX_RECT_RATIO		1.0/0.7
 #define MIN_CODE			0
-#define MAX_CODE			56
+#define MAX_CODE			23
 #define CODE_AREA			6
 
 // windows parameters
@@ -145,7 +151,7 @@ struct ApplicationWindows {
 		camZmov = 0.0f,
 		transX = 0.0f,
 		transZ = 0.0f,
-		mouse_zoom = 1.0f;
+		mouse_zoom = 0.6f;
 
 	HWND menu_item_handle[MENU_ITEM_NUM], mainWindow, // glowne okno aplikacji
 		static_axis_box, static_val_box, panel3D, // okno 3D
@@ -176,9 +182,9 @@ typedef struct _Marker {
 
 // strukturka przechowujaca markery po rekonstrukcji
 typedef struct _Marker3D {
-	bool isSet[56];
-	uint8 code[56];
-	float x[56], y[56], z[56], err[56];
+	bool isSet[23];
+	uint8 code[23];
+	float x[23], y[23], z[23], err[23];
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
 // struktura dla rekonstrukcji markerów
@@ -266,8 +272,8 @@ typedef struct _Camera {
 	Mat Kc, Ac, grayImg, colorImg;
 	Point2f ballCenter;
 	uint64 s_exp_time, savedExp;
-	Marker coded_markers[56] = { 0 };
-	Marker coded_markers_buff[56] = { 0 };
+	Marker coded_markers[23] = { 0 };
+	Marker coded_markers_buff[23] = { 0 };
 	D3DXMATRIX rotation; // DirectX
 } Camera, far* lpCamera, * pCamera;
 

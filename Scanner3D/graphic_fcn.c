@@ -424,7 +424,7 @@ void dxRenderFrame(void)
 			pingpong->DrawSubset(0);
 		}
 		//rysowanie markery
-		for (uint8 k = 1; k < 56; k++) {
+		for (uint8 k = 1; k < 23; k++) {
 			if (m3d.isSet[k]) {
 				D3DXMatrixTranslation(&matTrans, m3d.x[k], m3d.y[k], m3d.z[k]);
 				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
@@ -518,7 +518,7 @@ void dxRenderFrame(void)
 
 		// czas trwania trzeciego wątku
 		wchar_t codeTxt1[100];
-		swprintf(codeTxt1, 100, L"dT: %.1f", 1 / dT);
+		swprintf(codeTxt1, 100, L"FPS: %.1f", 1 / dT);
 		SetRect(&font_rect, 10, 870, 200, 200);
 		if (g_font != nullptr) g_font->DrawText(NULL, codeTxt1, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
 		
