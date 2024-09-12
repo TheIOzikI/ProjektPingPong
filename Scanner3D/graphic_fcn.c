@@ -482,14 +482,6 @@ void dxRenderFrame(void)
 				sphere_small->DrawSubset(0);
 
 			}
-			for (uint8 i = 0; i <= polyfit_points.xpred.size(); ++i) {
-				D3DXMatrixTranslation(&matTrans, polyfit_points.xpred[i], polyfit_points.ypred[i], polyfit_points.zpred[i]);
-				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
-				d3ddev->SetTransform(D3DTS_WORLD, &temp);
-				setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-				sphere_small->DrawSubset(0);
-			}
-
 		}
 		
 		//Rysowanie predykcja równania ruchu

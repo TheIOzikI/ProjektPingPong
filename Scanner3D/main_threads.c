@@ -264,36 +264,27 @@ void liveDataProcessing(void*)
 			listBall3dPositions();
 
 			//metody predykcji
-			switch (logicVariables.prediction) {
-			case 1:
-				if (prev_points.x.size() > 3) {
-					// Kalman filter
-					kalmanPrediction();
-					if (predicted_point.x.size() > 0) {
-						optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1000.0f);
-					}
+			if(logicVariables.prediction == 1 && prev_points.x.size() > 3){
+				//Kalman filter
+				kalmanPrediction();
+				if (predicted_point.x.size()>0) optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1200.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
 				}
-				break;
-
-			case 2:
-				if (prev_points.x.size() > 3) {
-					// Aproksymacja wielomianowa
-					polyfitPrediction();
-					if (polyfit_points.x.size() > 0) {
-						optimalStrikePointOther(polyfit_points.xpred, polyfit_points.ypred, polyfit_points.zpred, 1000.0f);
-					}
-				}
-				break;
-
-			case 3:
-				if (prev_points.x.size() > 3) {
-					// Równania ruchu
-					newtonPrediction();
-					if (predicted_points_newton.x.size() > 0) {
-						optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1000.0f);
-					}
-				}
-				break;
+			if (logicVariables.prediction == 2 && prev_points.x.size() > 3){
+				//Aproksymacja wielomianowa
+				polyfitPrediction();
+				if (polyfit_points.x.size() > 0) optimalStrikePointOther(polyfit_points.x, polyfit_points.y, polyfit_points.z, 1200.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+			}
+			if (logicVariables.prediction == 3 && prev_points.x.size() > 3) {
+				//Równania ruchu
+				newtonPrediction();
+				if (predicted_points_newton.x.size() > 0) optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1200.0f);
+				//odprintf("[Pingpong] Strike Point	X:	%f	Y:	1500	Z:	%f\n", crossplanepoints.x, crossplanepoints.z);
+			}
+			if (prev_points.x.size()>0) realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1200.0f);
+			distanceBetweenPoints(crossplanepoints.x,crossplanepoints.z,realplanepoints.x, realplanepoints.z);
+			if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
 			default:
 				prev_points.x.shrink_to_fit();
@@ -766,7 +757,7 @@ void polyfitPrediction() {
 	polyfit_points.z.clear();
 
 	int degree = 3;
-	int future_points = PREDICTION_TIME * 1 / dT;  // liczba kroków do przodu
+	int future_points = PREDICTION_TIME * dT / 1000;  // liczba kroków do przodu
 
 	vector<int> segment_start_indices;
 	segment_start_indices.push_back(0);  // Zaczynamy od pocz¹tku
@@ -778,16 +769,6 @@ void polyfitPrediction() {
 		}
 	}
 	segment_start_indices.push_back(prev_points.z.size());  // Zakoñczenie na koñcu danych
-
-	// Funkcja pomocnicza do przewidywania wartoœci wielomianu
-	auto polyval = [](const VectorXf& coeffs, float t) -> float {
-		float result = 0.0f;
-		int degree = coeffs.size() - 1;
-		for (int i = 0; i <= degree; ++i) {
-			result += coeffs[i] * pow(t, i);  // Wielomian o malej¹cych potêgach
-		}
-		return result;
-		};
 
 	// Przetwarzanie ka¿dego segmentu osobno
 	for (int seg = 0; seg < segment_start_indices.size() - 1; ++seg) {
@@ -815,34 +796,36 @@ void polyfitPrediction() {
 
 		// Przewidywanie wartoœci dla bie¿¹cego segmentu
 		for (int i = 0; i < n; ++i) {
-			float pred_x = polyval(p_x, i + 1);
-			float pred_y = polyval(p_y, i + 1);
-			float pred_z = polyval(p_z, i + 1);
-
+			float pred_x = 0, pred_y = 0, pred_z = 0;
+			for (int j = 0; j <= degree; ++j) {
+				pred_x += p_x(j) * pow(i + 1, j);
+				pred_y += p_y(j) * pow(i + 1, j);
+				pred_z += p_z(j) * pow(i + 1, j);
+			}
 			// Dodaj przewidywane wartoœci do polyfit_points
 			polyfit_points.x.push_back(pred_x);
 			polyfit_points.y.push_back(pred_y);
 			polyfit_points.z.push_back(pred_z);
 		}
 
-		polyfit_points.xpred.clear();
-		polyfit_points.ypred.clear();
-		polyfit_points.zpred.clear();
+		polyfit_points.zpred.shrink_to_fit();
 
+		polyfit_points.zpred.shrink_to_fit();
 
 		// Przewidywanie przysz³ych wartoœci dla bie¿¹cego segmentu
-		for (int i = 0; i < future_points; ++i) {
-			float t_future = n + i + 1;  // Kontynuujemy indeks po ostatnim punkcie segmentu
-			float pred_x_future = polyval(p_x, t_future);
-			float pred_y_future = polyval(p_y, t_future);
-			float pred_z_future = polyval(p_z, t_future);
-
+		for (int i = n; i < n + future_points; ++i) {
+			float pred_x = 0, pred_y = 0, pred_z = 0;
+			for (int j = 0; j <= degree; ++j) {
+				// U¿ywamy i - n + 1, aby przewidywaæ przysz³e wartoœci
+				pred_x += p_x(j) * pow(i - n + 1, j);
+				pred_y += p_y(j) * pow(i - n + 1, j);
+				pred_z += p_z(j) * pow(i - n + 1, j);
+			}
 			// Dodaj przewidywane przysz³e wartoœci do polyfit_points
-			polyfit_points.xpred.push_back(pred_x_future);
-			polyfit_points.ypred.push_back(pred_y_future);
-			polyfit_points.zpred.push_back(pred_z_future);
+			polyfit_points.x.push_back(pred_x);
+			polyfit_points.y.push_back(pred_y);
+			polyfit_points.z.push_back(pred_z);
 		}
-
 	}
 }
 
