@@ -11,7 +11,6 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
-#include <opencv2/core/cuda.hpp>
 #include <commctrl.h> // wykorzystane do trackbara
 #include <crtdefs.h>
 #include <process.h>
@@ -20,7 +19,6 @@
 #include <cmath>
 
 using namespace cv;
-using namespace cv::cuda;
 using namespace std;
 using namespace Eigen;
 
@@ -63,8 +61,6 @@ typedef unsigned long long	uint64;
 #define W_PX				(CAM_WIDTH/MIN_SCALE - 1U) 
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
 
-//////////zmienione na logicvariable guziki
-
 //#define DT					40.0f // 40 [ms] czas trwania petli w watku glównym 25FPS
 //#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
 //#define DT					16.6f // 16.(6) [ms] czas trwania petli w watku glównym 60FPS
@@ -74,6 +70,7 @@ typedef unsigned long long	uint64;
 #define PREDICTION_TIME		5 //ile sekund wyprzedzić predykcje
 #define BOUNCE_FACTOR		0.8f //tłumienie wektora w odbiciu
 #define BOUNCE_HEIGHT		50.0f // wysokość wykrycia odbicia
+#define MAX_Y_PRED_AXIS		1200f
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
@@ -93,7 +90,7 @@ typedef unsigned long long	uint64;
 #define MIN_RECT_RATIO		0.7/1.0
 #define MAX_RECT_RATIO		1.0/0.7
 #define MIN_CODE			0
-#define MAX_CODE			23
+#define MAX_CODE			56
 #define CODE_AREA			6
 
 // windows parameters
@@ -135,7 +132,7 @@ struct ApplicationWindows {
 		bool menu_item_enabled[14];
 	} NamedButtons = {
 		{ // inicjalizacja tablicy appWindows.menu_buttons.named_buttons.menu_item_names
-			L"Kalibracja par. zewnętrznych", L"Typ predykcji", L"Rysowanie trajektorii", L"Szukanie markerów ON/OFf", L"40/5 FPS", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera", 
+			L"Kalibracja par. zewnętrznych", L"Typ predykcji", L"Rysowanie trajektorii", L"Szukanie markerów ON/OFf", L"40/5 FPS", L"Zapis zdjęcia CAM L", L"Zapis zdjęcia CAM R", L"Zmiana koloru markera",
 			L"Autoekspozycja", L"Typ obrazów",L"Zakończ pracę",  L"widok XY", L"widok YZ", L"widok XZ"
 		},
 		{ // inicjalizacja tablicy menu_item_enabled -> status przycisków (1 - aktywny, 0 - nieaktywny)
@@ -166,7 +163,7 @@ struct ApplicationWindows {
 //zmienne logiczne
 struct LogicalVariables {
 	uint8 view_rotation = 2, imdisp = 0, // zmienna wybierająca sposob wyswietlania obrazów
-	prediction = 0; //przełączanie typu predykcji
+		prediction = 0; //przełączanie typu predykcji
 	bool stop_exe = false, save_img_1 = false, save_img_2 = false,
 		auto_exp = false, mkr_color = true, // 0 (false) = czarny srodek  1 (true) = bialy srodek
 		trajectory = false, fps = false, marker = false; // wyświetlanie trajektorii
@@ -182,9 +179,9 @@ typedef struct _Marker {
 
 // strukturka przechowujaca markery po rekonstrukcji
 typedef struct _Marker3D {
-	bool isSet[23];
-	uint8 code[23];
-	float x[23], y[23], z[23], err[23];
+	bool isSet[56];
+	uint8 code[56];
+	float x[56], y[56], z[56], err[56];
 } Marker3D, far* lpMarker3D, * pMarker3D;
 
 // struktura dla rekonstrukcji markerów
@@ -235,6 +232,9 @@ struct polyfitPredictionPoints {
 	vector<float> x;
 	vector<float> y;
 	vector<float> z;
+	vector<float> xpred;
+	vector<float> ypred;
+	vector<float> zpred;
 };
 
 //Struktura przechowująca punkty z predykcji sposobem  równań ruchu
@@ -269,8 +269,8 @@ typedef struct _Camera {
 	Mat Kc, Ac, grayImg, colorImg;
 	Point2f ballCenter;
 	uint64 s_exp_time, savedExp;
-	Marker coded_markers[23] = { 0 };
-	Marker coded_markers_buff[23] = { 0 };
+	Marker coded_markers[56] = { 0 };
+	Marker coded_markers_buff[56] = { 0 };
 	D3DXMATRIX rotation; // DirectX
 } Camera, far* lpCamera, * pCamera;
 

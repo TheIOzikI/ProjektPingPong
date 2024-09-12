@@ -424,7 +424,7 @@ void dxRenderFrame(void)
 			pingpong->DrawSubset(0);
 		}
 		//rysowanie markery
-		for (uint8 k = 1; k < 23; k++) {
+		for (uint8 k = 1; k < 56; k++) {
 			if (m3d.isSet[k]) {
 				D3DXMatrixTranslation(&matTrans, m3d.x[k], m3d.y[k], m3d.z[k]);
 				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
@@ -434,7 +434,7 @@ void dxRenderFrame(void)
 			}
 		}
 		//rysowanie trajektoria 
-		if (logicVariables.trajectory == true && prev_points.x.size()>0) {
+		if (logicVariables.trajectory == true && prev_points.x.size() > 0) {
 			for (uint8 k = 0; k < prev_points.x.size(); k++) {
 				// Rysowanie punktów (sfery)
 				D3DXMatrixTranslation(&matTrans, prev_points.x[k], prev_points.y[k], prev_points.z[k]);
@@ -446,7 +446,7 @@ void dxRenderFrame(void)
 		}
 
 		//rysowanie predykcja kalman
-		if (logicVariables.prediction == 1 && prev_points.x.size()>0 && estimated_point.x.size()>0) {
+		if (logicVariables.prediction == 1 && prev_points.x.size() > 0 && estimated_point.x.size() > 0) {
 
 			int n = estimated_point.x.size();  // liczba pomiarów
 			int n_future = predicted_point.x.size();  // liczba kroków do przodu
@@ -458,20 +458,21 @@ void dxRenderFrame(void)
 				d3ddev->SetTransform(D3DTS_WORLD, &temp);
 				setColor(0.5f, 1.0f, 0.0f, 1.0f, 0.5f, 1.0f, 0.0f, 1.0f);
 				sphere_small->DrawSubset(0);
-				for (uint8 j = 0; j < n_future; ++j) {
-					//rysowanie punktów predykcji
-					D3DXMatrixTranslation(&matTrans, predicted_point.x[j], predicted_point.y[j], predicted_point.z[j]);
-					D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
-					d3ddev->SetTransform(D3DTS_WORLD, &temp);
-					setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-					sphere_small->DrawSubset(0);
 
-				}
+			}
+			for (uint8 j = 0; j < n_future; ++j) {
+				//rysowanie punktów predykcji
+				D3DXMatrixTranslation(&matTrans, predicted_point.x[j], predicted_point.y[j], predicted_point.z[j]);
+				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+				d3ddev->SetTransform(D3DTS_WORLD, &temp);
+				setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+				sphere_small->DrawSubset(0);
+
 			}
 		}
 
 		//rysowanie predykcja wielomian
-		if (logicVariables.prediction == 2 && prev_points.x.size()>0 && polyfit_points.x.size()>0) {
+		if (logicVariables.prediction == 2 && prev_points.x.size() > 0 && polyfit_points.x.size() > 0) {
 
 			for (uint8 i = 0; i <= polyfit_points.x.size(); ++i) {
 				//rysowanie punktów predykcji
@@ -482,10 +483,18 @@ void dxRenderFrame(void)
 				sphere_small->DrawSubset(0);
 
 			}
+			for (uint8 i = 0; i <= polyfit_points.xpred.size(); ++i) {
+				D3DXMatrixTranslation(&matTrans, polyfit_points.xpred[i], polyfit_points.ypred[i], polyfit_points.zpred[i]);
+				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
+				d3ddev->SetTransform(D3DTS_WORLD, &temp);
+				setColor(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f);
+				sphere_small->DrawSubset(0);
+			}
+
 		}
-		
+
 		//Rysowanie predykcja równania ruchu
-		if (logicVariables.prediction == 3 && prev_points.x.size()>0 && predicted_points_newton.x.size()>0) {
+		if (logicVariables.prediction == 3 && prev_points.x.size() > 0 && predicted_points_newton.x.size() > 0) {
 
 			for (uint8 i = 0; i <= predicted_points_newton.x.size(); ++i) {
 				//rysowanie punktów predykcji
@@ -513,7 +522,7 @@ void dxRenderFrame(void)
 		swprintf(codeTxt1, 100, L"FPS: %.1f", 1 / dT);
 		SetRect(&font_rect, 10, 870, 200, 200);
 		if (g_font != nullptr) g_font->DrawText(NULL, codeTxt1, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
-		
+
 		//typ predykcji
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 200); // pierwszy - szerokość, drugi - wysokość
 
@@ -527,7 +536,7 @@ void dxRenderFrame(void)
 		swprintf(strikePoint, 200, L"PredStrkPoint X: %.1f  Z: %.1f", crossplanepoints.x, crossplanepoints.z);
 		SetRect(&font_rect, 0, 550, 0, 0);
 		if (g_font != nullptr) g_font->DrawText(NULL, strikePoint, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
-		
+
 		//trajektoria realplanepoints
 		SetRect(&font_rect, 0, 0, int(CAM_WINDOW_HEIGHT * 2.5 - 800), 50); // pierwszy - szerokość, drugi - wysokość
 		if (logicVariables.trajectory == true && g_font2 != nullptr) g_font2->DrawText(NULL, L"Rysowanie trajektorii: ON", -1, &font_rect, DT_LEFT | DT_NOCLIP | DT_VCENTER, 0xFFFFFFFF);
@@ -535,7 +544,7 @@ void dxRenderFrame(void)
 		swprintf(realPoint, 200, L"RealCrossPoint X: %.1f  Z: %.1f", realplanepoints.x, realplanepoints.z);
 		SetRect(&font_rect, 0, 500, 0, 0);
 		if (g_font != nullptr) g_font->DrawText(NULL, realPoint, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
-		swprintf(distancebetweenpoints, 200, L"Distance: %.1f cm", realplanepoints.distance/10);
+		swprintf(distancebetweenpoints, 200, L"Distance: %.1f cm", realplanepoints.distance / 10);
 		SetRect(&font_rect, 0, 450, 0, 0);
 		if (g_font != nullptr) g_font->DrawText(NULL, distancebetweenpoints, -1, &font_rect, DT_LEFT | DT_NOCLIP, 0xFFAAAAAA);
 		//////////////   KOMUNIKATY   //////////////////////
