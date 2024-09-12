@@ -18,6 +18,7 @@ void newtonPrediction();
 void optimalStrikePointOther(vector<float>& x, vector<float>& y, vector<float>& z, float a);
 void realStrikePointOther(vector<float>& x, vector<float>& y, vector<float>& z, float a);
 void distanceBetweenPoints(float& x1, float& z1, float& x2, float& z2);
+void saveToFile();
 void cleanBorder(Mat&);
 float alignRadians(Mat&, float, Point2f);
 uint8_t readCode(Mat&, RotatedRect);

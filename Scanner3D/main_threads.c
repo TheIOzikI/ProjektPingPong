@@ -321,6 +321,7 @@ void liveDataProcessing(void*)
 			if (prev_points.x.size() > 0) {
 				realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1000.0f);
 				distanceBetweenPoints(crossplanepoints.x, crossplanepoints.z, realplanepoints.x, realplanepoints.z);
+				saveToFile();
 			}
 			//if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
@@ -946,6 +947,57 @@ void distanceBetweenPoints(float& x1, float& z1, float& x2, float& z2) {
 	float dx = x1 - x2;
 	float dz = z1 - z2;
 	realplanepoints.distance = sqrt(dx * dx + dz * dz);
+
+
+}
+
+void saveToFile() {
+	string filePath = "C:\\Users\\TheIO\\OneDrive\\ZUT\\Mechatronika\\Dyplom\\dev\\ProjektPingPong\\x64\\Release\\config\\results.txt";
+
+	// Otwarcie pliku w trybie append (dopisywanie na koñcu pliku)
+	ofstream file(filePath, ios::app);
+
+	// Sprawdzenie, czy plik zosta³ poprawnie otwarty
+	if (!file.is_open()) {
+		odprintf("[Info] Nie uda³o siê otworzyæ pliku zapisu wyników predykcji\n");
+		return;
+	}
+
+	// Zale¿nie od wartoœci prediction, zapisujemy ró¿ne dane w jednym wierszu z tabulatorami
+	switch (logicVariables.prediction) {
+	case 1:
+		file << "Filtr Kalman\t";
+		file << realplanepoints.distance << "\t";
+		file << crossplanepoints.x << "\t";
+		file << crossplanepoints.z << "\t";
+		file << realplanepoints.x << "\t";
+		file << realplanepoints.z << "\n";
+		break;
+
+	case 2:
+		file << "Aproksymacja Wielomianowa\t";
+		file << realplanepoints.distance << "\t";
+		file << crossplanepoints.x << "\t";
+		file << crossplanepoints.z << "\t";
+		file << realplanepoints.x << "\t";
+		file << realplanepoints.z << "\n";
+		break;
+
+	case 3:
+		file << "Równania ruchu\t";
+		file << realplanepoints.distance << "\t";
+		file << crossplanepoints.x << "\t";
+		file << crossplanepoints.z << "\t";
+		file << realplanepoints.x << "\t";
+		file << realplanepoints.z << "\n";
+		break;
+
+	default:
+		break;
+	}
+
+	// Zamkniêcie pliku
+	file.close();
 }
 
 void cleanBorder(Mat& img) {
