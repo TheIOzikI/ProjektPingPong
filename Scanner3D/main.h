@@ -67,10 +67,11 @@ typedef unsigned long long	uint64;
 #define DT					10.0f // 10 [ms] czas trwania petli w watku glównym 100FPS
 
 //prediction parameters
-#define PREDICTION_TIME		5 //ile sekund wyprzedzić predykcje
+#define PREDICTION_TIME		2 //ile sekund wyprzedzić predykcje
 #define BOUNCE_FACTOR		0.8f //tłumienie wektora w odbiciu
 #define BOUNCE_HEIGHT		50.0f // wysokość wykrycia odbicia
-#define MAX_Y_PRED_AXIS		1200f
+#define MAX_Y_PRED_AXIS		800
+#define OPTIMAL_POINT		1300
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
@@ -197,6 +198,9 @@ struct prevPoints3D {
 	vector<float> x;
 	vector<float> y;
 	vector<float> z;
+	vector<float> xreal;
+	vector<float> yreal;
+	vector<float> zreal;
 	int cycles;
 };
 

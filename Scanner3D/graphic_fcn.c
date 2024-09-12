@@ -434,10 +434,10 @@ void dxRenderFrame(void)
 			}
 		}
 		//rysowanie trajektoria 
-		if (logicVariables.trajectory == true && prev_points.x.size() > 0) {
-			for (uint8 k = 0; k < prev_points.x.size(); k++) {
+		if (logicVariables.trajectory == true && prev_points.xreal.size() > 0) {
+			for (uint8 k = 0; k < prev_points.xreal.size(); k++) {
 				// Rysowanie punktów (sfery)
-				D3DXMatrixTranslation(&matTrans, prev_points.x[k], prev_points.y[k], prev_points.z[k]);
+				D3DXMatrixTranslation(&matTrans, prev_points.xreal[k], prev_points.yreal[k], prev_points.zreal[k]);
 				D3DXMatrixMultiply(&temp, &matTrans, &matWorldRT);
 				d3ddev->SetTransform(D3DTS_WORLD, &temp);
 				setColor(1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f); //czerwony

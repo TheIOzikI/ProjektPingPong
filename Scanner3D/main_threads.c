@@ -270,7 +270,7 @@ void liveDataProcessing(void*)
 					// Kalman filter
 					kalmanPrediction();
 					if (predicted_point.x.size() > 0) {
-						optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, 1000.0f);
+						optimalStrikePointOther(predicted_point.x, predicted_point.y, predicted_point.z, OPTIMAL_POINT);
 					}
 				}
 				break;
@@ -280,7 +280,7 @@ void liveDataProcessing(void*)
 					// Aproksymacja wielomianowa
 					polyfitPrediction();
 					if (polyfit_points.x.size() > 0) {
-						optimalStrikePointOther(polyfit_points.xpred, polyfit_points.ypred, polyfit_points.zpred, 1000.0f);
+						optimalStrikePointOther(polyfit_points.xpred, polyfit_points.ypred, polyfit_points.zpred, OPTIMAL_POINT);
 					}
 				}
 				break;
@@ -290,7 +290,7 @@ void liveDataProcessing(void*)
 					// Równania ruchu
 					newtonPrediction();
 					if (predicted_points_newton.x.size() > 0) {
-						optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, 1000.0f);
+						optimalStrikePointOther(predicted_points_newton.x, predicted_points_newton.y, predicted_points_newton.z, OPTIMAL_POINT);
 					}
 				}
 				break;
@@ -318,12 +318,12 @@ void liveDataProcessing(void*)
 				break;
 			}
 
-			if (prev_points.x.size() > 0) {
-				realStrikePointOther(prev_points.x, prev_points.y, prev_points.z, 1000.0f);
+			if (prev_points.xreal.size() > 0) {
+				realStrikePointOther(prev_points.xreal, prev_points.yreal, prev_points.zreal, OPTIMAL_POINT);
 				distanceBetweenPoints(crossplanepoints.x, crossplanepoints.z, realplanepoints.x, realplanepoints.z);
 
 			}
-			//if(m3d.isSet[0] == true) odprintf("[Info] Pi?eczka[%d]	%f	%f	%f	|%f\n", m3d.code[0], m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
+			if(m3d.isSet[0] == true) odprintf("[Info] Pi³eczka	%f		%f		%f		|%f\n", m3d.x[0], m3d.y[0], m3d.z[0], m3d.err[0]);
 
 			EnterCriticalSection(&cs2);
 			cam1.mk_lock = false;
@@ -639,9 +639,15 @@ void listBall3dPositions() {
 	if (m3d.isSet[0] == true) {
 		// przepisanie punktów do odpowiednich wektorów
 		if (prev_points.x.size() < 250) {
-			prev_points.x.push_back(m3d.x[0]);
-			prev_points.y.push_back(m3d.y[0]);
-			prev_points.z.push_back(m3d.z[0]);
+			prev_points.xreal.push_back(m3d.x[0]);
+			prev_points.yreal.push_back(m3d.y[0]);
+			prev_points.zreal.push_back(m3d.z[0]);
+
+			if (m3d.y[0] < MAX_Y_PRED_AXIS) {
+				prev_points.x.push_back(m3d.x[0]);
+				prev_points.y.push_back(m3d.y[0]);
+				prev_points.z.push_back(m3d.z[0]);
+			}
 		}
 
 	}
@@ -651,7 +657,7 @@ void listBall3dPositions() {
 		//odprintf("[Info] Ball not seen %i \n", prev_points.cycles);
 	}
 	//kasowanie trajektorii 
-	if (prev_points.cycles >= 200) {
+	if (prev_points.cycles >= PREDICTION_TIME * 1/dT) {
 		//gdy reset trajektorii to zapisz wynik ¿eby nie spamiæ wynikami w txt
 		saveToFile();
 
@@ -659,6 +665,11 @@ void listBall3dPositions() {
 		prev_points.x.clear();
 		prev_points.y.clear();
 		prev_points.z.clear();
+
+		prev_points.xreal.clear();
+		prev_points.yreal.clear();
+		prev_points.zreal.clear();
+
 		//prev_points.x.shrink_to_fit();
 		//prev_points.y.shrink_to_fit();
 		//prev_points.z.shrink_to_fit();
@@ -670,7 +681,7 @@ void listBall3dPositions() {
 void kalmanPrediction() {
 	float g = 9.8;
 	int n = prev_points.x.size();  // Liczba pomiarów
-	int n_future = 20; //PREDICTION_TIME * 1/dT;  // liczba kroków do przodu
+	int n_future = PREDICTION_TIME * 1/dT;  // liczba kroków do przodu
 
 	estimated_point.x.clear();
 	estimated_point.y.clear();
@@ -713,8 +724,8 @@ void kalmanPrediction() {
 
 	// Macierz kowariancji b³êdów
 	MatrixXf P = MatrixXf::Identity(9, 9);
-	MatrixXf Q = 0.001 * MatrixXf::Identity(9, 9);
-	MatrixXf R = 0.000002 * MatrixXf::Identity(3, 3);
+	MatrixXf Q = 0.05 * MatrixXf::Identity(9, 9);
+	MatrixXf R = 0.0001 * MatrixXf::Identity(3, 3);
 
 	// Pomiary bêd¹ reprezentowane jako wektor
 	vector<Vector3f> measurements(n);
@@ -792,7 +803,7 @@ void polyfitPrediction() {
 
 	// Wykrywanie przerw, gdy z < 20
 	for (int i = 1; i < prev_points.z.size(); ++i) {
-		if (prev_points.z[i] >= 100 && prev_points.z[i - 1] < 100) {
+		if (prev_points.z[i] >= BOUNCE_HEIGHT && prev_points.z[i - 1] < BOUNCE_HEIGHT) {
 			segment_start_indices.push_back(i);  // Nowy segment
 		}
 	}
