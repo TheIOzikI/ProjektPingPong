@@ -679,22 +679,18 @@ void listBall3dPositions() {
 }
 
 void kalmanPrediction() {
+	//zmienne lokalne
 	float g = 9.8;
 	int n = prev_points.x.size();  // Liczba pomiarów
 	int n_future = PREDICTION_TIME * 1/dT;  // liczba kroków do przodu
 
+	//czyszczenie wektorów
 	estimated_point.x.clear();
 	estimated_point.y.clear();
 	estimated_point.z.clear();
-	//estimated_point.x.shrink_to_fit();
-	//estimated_point.y.shrink_to_fit();
-	//estimated_point.z.shrink_to_fit();
 	predicted_point.x.clear();
 	predicted_point.y.clear();
 	predicted_point.z.clear();
-	//predicted_point.x.shrink_to_fit();
-	//predicted_point.y.shrink_to_fit();
-	//predicted_point.z.shrink_to_fit();
 
 	// Inicjalizacja wektora stanu [px, py, pz, vx, vy, vz, ax, ay, az]
 	VectorXf x(9);
@@ -724,10 +720,9 @@ void kalmanPrediction() {
 
 	// Macierz kowariancji b³êdów
 	MatrixXf P = MatrixXf::Identity(9, 9);
-	MatrixXf Q = 0.05 * MatrixXf::Identity(9, 9);
-	MatrixXf R = 0.0001 * MatrixXf::Identity(3, 3);
+	MatrixXf Q = 0.001 * MatrixXf::Identity(9, 9);
+	MatrixXf R = 0.01 * MatrixXf::Identity(3, 3);
 
-	// Pomiary bêd¹ reprezentowane jako wektor
 	vector<Vector3f> measurements(n);
 	for (int i = 0; i < n; ++i) {
 		measurements[i] << prev_points.x[i], prev_points.y[i], prev_points.z[i];
@@ -760,13 +755,13 @@ void kalmanPrediction() {
 		estimated_point.x.push_back(x(0));
 		estimated_point.y.push_back(x(1));
 		estimated_point.z.push_back(x(2));
-
+		
+		//czyszczenie tablic aby pokazywaæ tylko predykcje z ostatniego punktu
 		predicted_point.x.clear();
 		predicted_point.y.clear();
 		predicted_point.z.clear();
 
 		// Przewidywane pozycje
-		// Prognoza na przysz³e 10 kroków
 		VectorXf x_future = x;
 		for (int j = 0; j < n_future; ++j) {
 			x_future = A * x_future;
@@ -777,6 +772,7 @@ void kalmanPrediction() {
 				x_future(5) = -x_future(5) * BOUNCE_FACTOR;
 			}
 
+			// Przechowywanie oszacowanych wspó³rzêdnych
 			predicted_point.x.push_back(x_future(0));
 			predicted_point.y.push_back(x_future(1));
 			predicted_point.z.push_back(x_future(2));
@@ -791,17 +787,17 @@ void polyfitPrediction() {
 	polyfit_points.x.clear();
 	polyfit_points.y.clear();
 	polyfit_points.z.clear();
-	//polyfit_points.x.shrink_to_fit();
-	//polyfit_points.y.shrink_to_fit();
-	//polyfit_points.z.shrink_to_fit();
 
+	//stopieñ wielomianu
 	int degree = 3;
+
+	//czas predykcji
 	int future_points = PREDICTION_TIME * 10;  // liczba kroków do przodu
 
 	vector<int> segment_start_indices;
 	segment_start_indices.push_back(0);  // Zaczynamy od pocz¹tku
 
-	// Wykrywanie przerw, gdy z < 20
+	// Wykrywanie przerw, gdy z < BOUNCE_HEIGHT
 	for (int i = 1; i < prev_points.z.size(); ++i) {
 		if (prev_points.z[i] >= BOUNCE_HEIGHT && prev_points.z[i - 1] < BOUNCE_HEIGHT) {
 			segment_start_indices.push_back(i);  // Nowy segment
@@ -849,7 +845,7 @@ void polyfitPrediction() {
 			float pred_y = polyval(p_y, i + 1);
 			float pred_z = polyval(p_z, i + 1);
 
-			// Dodaj przewidywane wartoœci do polyfit_points
+			// zapis w wektorze
 			polyfit_points.x.push_back(pred_x);
 			polyfit_points.y.push_back(pred_y);
 			polyfit_points.z.push_back(pred_z);
@@ -858,18 +854,15 @@ void polyfitPrediction() {
 		polyfit_points.xpred.clear();
 		polyfit_points.ypred.clear();
 		polyfit_points.zpred.clear();
-		//polyfit_points.xpred.shrink_to_fit();
-		//polyfit_points.ypred.shrink_to_fit();
-		//polyfit_points.zpred.shrink_to_fit();
 
 		// Przewidywanie przysz³ych wartoœci dla bie¿¹cego segmentu
 		for (int i = 0; i < future_points; ++i) {
-			float t_future = n + i + 1;  // Kontynuujemy indeks po ostatnim punkcie segmentu
+			float t_future = n + i + 1;
 			float pred_x_future = polyval(p_x, t_future);
 			float pred_y_future = polyval(p_y, t_future);
 			float pred_z_future = polyval(p_z, t_future);
 
-			// Dodaj przewidywane przysz³e wartoœci do polyfit_points
+			//zapis w wektorze
 			polyfit_points.xpred.push_back(pred_x_future);
 			polyfit_points.ypred.push_back(pred_y_future);
 			polyfit_points.zpred.push_back(pred_z_future);
@@ -889,19 +882,17 @@ void newtonPrediction() {
 		predicted_points_newton.x.clear();
 		predicted_points_newton.y.clear();
 		predicted_points_newton.z.clear();
-		//predicted_points_newton.x.shrink_to_fit();
-		//predicted_points_newton.y.shrink_to_fit();
-		//predicted_points_newton.z.shrink_to_fit();
+
 	}
 
 	vector<float> vx, vy, vz, ax, ay, az;
-
+	//obliczenie prêdkoœci
 	for (size_t i = 1; i < prev_points.x.size(); ++i) {
 		vx.push_back((prev_points.x[i] - prev_points.x[i - 1]) / dT);
 		vy.push_back((prev_points.y[i] - prev_points.y[i - 1]) / dT);
 		vz.push_back((prev_points.z[i] - prev_points.z[i - 1]) / dT);
 	}
-
+	//obliczenie przyspieszenia
 	for (size_t i = 1; i < vx.size(); ++i) {
 		ax.push_back((vx[i] - vx[i - 1]) / dT);
 		ay.push_back((vy[i] - vy[i - 1]) / dT);
@@ -909,7 +900,7 @@ void newtonPrediction() {
 	}
 
 	// Predykcja kolejnych pozycji na podstawie ostatniej prêdkoœci i przyspieszenia
-	int n_pred = 10; // Liczba przewidywanych punktów
+	int n_pred = PREDICTION_TIME * 1/dT; // Liczba przewidywanych punktów
 	vector<float> x_pred(n_pred, 0), y_pred(n_pred, 0), z_pred(n_pred, 0);
 
 	x_pred[0] = prev_points.x.back();
@@ -923,7 +914,7 @@ void newtonPrediction() {
 		y_pred[t_pred] = y_pred[t_pred - 1] + vy.back() * dT + 0.5 * ay.back() * dT * dT;
 		z_pred[t_pred] = z_pred[t_pred - 1] + vz.back() * dT + 0.5 * az.back() * dT * dT;
 
-		// Wykrywanie odbicia w osi Z (gdy z osi¹ga 0)
+		// Wykrywanie odbicia w osi Z (gdy z osi¹ga BOUNCE_HEIGHT)
 		if (z_pred[t_pred] < BOUNCE_HEIGHT) {
 			z_pred[t_pred] = -z_pred[t_pred];  // Symulacja odbicia
 			vz.back() = -vz.back() * BOUNCE_FACTOR;  // Zmiana prêdkoœci z t³umieniem
@@ -940,7 +931,7 @@ void optimalStrikePointOther(vector<float>& x_data, vector<float>& y_data, vecto
 
 	int size = x_data.size();  // Automatyczne sprawdzenie d³ugoœci wektora
 
-	// Znajdujemy przeciêcia dla pojedynczego wektora punktów
+	// Znajdujemy przeciêcia dla pojedynczego wektora punktów z ograniczeniem w osi X -1000 +1000 oraz Z -30 +700 (wartoœci w mm)
 	for (int i = 0; i < size - 1; ++i) {
 		if (x_data[i] < 1000 && x_data[i] > -1000 && z_data[i] < 700 && z_data[i] > -30) {
 			float y1 = y_data[i];

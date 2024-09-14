@@ -62,16 +62,16 @@ typedef unsigned long long	uint64;
 #define CAM_PIX				CAM_WIDTH*CAM_HEIGHT
 
 //#define DT					40.0f // 40 [ms] czas trwania petli w watku glównym 25FPS
-//#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
+#define DT					25.0f // 25 [ms] czas trwania petli w watku glównym 40FPS
 //#define DT					16.6f // 16.(6) [ms] czas trwania petli w watku glównym 60FPS
-#define DT					10.0f // 10 [ms] czas trwania petli w watku glównym 100FPS
+//#define DT					10.0f // 10 [ms] czas trwania petli w watku glównym 100FPS
 
 //prediction parameters
-#define PREDICTION_TIME		2 //ile sekund wyprzedzić predykcje
+#define PREDICTION_TIME		1 //ile sekund wyprzedzić predykcje
 #define BOUNCE_FACTOR		0.8f //tłumienie wektora w odbiciu
 #define BOUNCE_HEIGHT		50.0f // wysokość wykrycia odbicia
-#define MAX_Y_PRED_AXIS		800
-#define OPTIMAL_POINT		1300
+#define MAX_Y_PRED_AXIS		8000
+#define OPTIMAL_POINT		1250
 
 // exposure parameters
 #define CAM_EXP_MIN			1000U		
